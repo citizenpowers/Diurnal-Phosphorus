@@ -21,7 +21,7 @@ mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","
 
 #RPA data
 RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
-
+#RPA Sorted Data
 RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
 
 #sta2 c3 =2400 acres
