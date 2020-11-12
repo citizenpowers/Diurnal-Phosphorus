@@ -1,8 +1,5 @@
 rm(list=ls())
 
-.libPaths( c( .libPaths(), "C:/Users/mpowers/OneDrive - South Florida Water Management District 1/WQTT/R/Packages") )  #path to packages that could not be installed at admin protected location
-
-
 library(readr)
 library(readxl)
 library(scales)
@@ -18,12 +15,14 @@ library(maptools)
 
 # Import data for RPA analysis -------------------------------------------------------------
 #saved RPA and flow DF. 
-RPAs_with_Flow <- read_csv("RPA and Flow.csv") %>%
+RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
 mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
 
 #RPA data
-RPAs <-  read_excel("Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+
+RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
 
 #sta2 c3 =2400 acres
 #STA34 C3B 2087 acres
