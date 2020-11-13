@@ -141,7 +141,7 @@ mutate(`Flow Category` = as.factor(case_when(
 write.csv(RPAs_with_Flow_Complete_Days ,"RPA and Flow from continous flow day.csv")
 
 #upload csv
-RPAs_with_Flow_Complete_Days  <- read_csv("RPA and Flow from continous flow day.csv") 
+RPAs_with_Flow_Complete_Days  <- read_csv("Data/RPA and Flow from continous flow day.csv") 
 
 #Hourly TP Variation from the Daily Mean by Station from days of continuous flow
 ggplot(RPAs_with_Flow_Complete_Days,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
