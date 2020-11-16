@@ -36,7 +36,7 @@ G379D_C_BK <- select(rename(read_csv("Data/G379D_C_BK.csv",  skip = 2),date = 1,
 G334_S_BK_1 <- select(rename(read_csv("Data/G334_S_BK.csv",skip = 2),date = 1,G334=4),1,4)
 
 #RPA data
-RPAs <-  read_excel("Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
 # Step 2: Tidy Flow Data ------------------------------------------------
 
@@ -73,13 +73,10 @@ group_by(Station,Date,Hour) %>%
 summarise(Flow=mean(Flow,na.rm = TRUE),HLR=mean(HLR,na.rm=TRUE))
 
 #analysis of flow at closest gate only
-Combined_BK_Flow_closest_gate <- G381B_C_BK %>%
-bind_rows(G379D_C_BK) %>%
+Combined_BK_Flow_closest_gate <- mutate(G381B_C_BK,date=dmy_hms(date)) %>%
+bind_rows(mutate(G379D_C_BK,date=mdy_hm(date))) %>%
 bind_rows(mutate(G334_S_BK_1,date=mdy_hm(date)))  %>%
 gather("Station","Flow",G381B,G379D,G334) %>%
-mutate(`Station` = case_when(`Station`=="G334_S_FLOW_cfs" ~ "G334",
-                               `Station`=="G379D_C_FLOW_cfs"~ "G379D", 
-                               `Station`=="G381B_C_FLOW_cfs" ~ "G381B")) %>%
 mutate(Date=as.Date(date)) %>%
 #mutate(Flow=if_else(Station=="G334",Flow,Flow)) %>%  #G334 flow/5 since it is larger structure representing larger area
 mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
@@ -105,7 +102,7 @@ mutate(`24_hour_mean`=mean(TPO4)) %>%
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
 
-write.csv(RPAs_Sorted, "RPAs Sorted.csv")
+write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv")
 
 # Step 4: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
@@ -123,6 +120,6 @@ mutate(`Flow Category` = as.factor(case_when(
     Flow<0 ~ "Reverse Flow"))) %>%
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)")))
 
-write.csv(RPAs_with_Flow, "RPA and Flow.csv")
+write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv")
 
 
