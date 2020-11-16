@@ -12,8 +12,6 @@ library(tidyr)
 library(maptools)
 
 
-
-
 #Steps
 
 # Step 1: Import Data from CSV (Only Run if data need update. Skip to create fig script otherwise) --------
