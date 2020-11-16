@@ -13,8 +13,7 @@ library(maptools)
 
 
 #Steps
-
-# Step 1: Import Data from CSV (Only Run if data need update. Skip to create fig script otherwise) --------
+# Step 1: Import Flow  Data from CSV (Only Run if data need update. Skip to create fig script otherwise) --------
 #read from CSV
 #G381
 G381A_C_BK <- select(rename(read_csv("Data/G381A_C_BK.csv",  skip = 2),date = 1,G381A=4),1,4)
@@ -32,9 +31,6 @@ G379D_C_BK <- select(rename(read_csv("Data/G379D_C_BK.csv",  skip = 2),date = 1,
 
 #G334
 G334_S_BK_1 <- select(rename(read_csv("Data/G334_S_BK.csv",skip = 2),date = 1,G334=4),1,4)
-
-#RPA data
-RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
 # Step 2: Tidy Flow Data ------------------------------------------------
 
@@ -81,7 +77,12 @@ mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
 group_by(Station,Date,Hour) %>%
 summarise(Flow=mean(Flow,na.rm = TRUE))
 
-# Step 3: Tidy RPA data  --------------------------------------
+# Step 3: Import and Tidy RPA data  --------------------------------------
+
+#RPA data
+RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+
+
 RPAs_Sorted <- RPAs %>%
 filter(!is.na(TPO4)) %>%
 mutate(Month=month(Date,label=TRUE)) %>%
@@ -102,7 +103,31 @@ mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*1
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv")
 
-# Step 4: Join Flow and RPA data and save DF --------------------------------------
+# Step 4: Import and Tidy Stage Data ----------------------------------------------
+# Stage from G334_H,G379B_H, G381B_H
+
+G334_H_BK <- select(rename(read_csv("Data/G334_H_BK.csv",  skip = 2),date = 1,G334=4),1,4)
+
+G379B_H_BK <- select(rename(read_csv("Data/G379B_H_BK.csv",  skip = 2),date = 1,G379=4),1,4)
+
+G381B_H_BK <- select(rename(read_csv("Data/G381B_H_BK.csv",  skip = 2),date = 1,G381=4),1,4)
+
+Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+full_join(mutate(G334_H_BK,date=dmy_hms(date)),by="date") %>%  #sum flow from all gates in STA34 cell 3B
+full_join(mutate(G379B_H_BK,date=dmy_hms(date)),by="date") %>%
+full_join(mutate(G381B_H_BK,date=mdy_hm(date)),by="date") %>%  
+arrange(date) %>%
+fill(G381,G379,G334) %>% 
+pivot_longer(2:4,names_to="Station",values_to="Stage") %>%
+mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
+select(-date)
+  
+# Step 5: Import and Tidy Sonde Data ----------------------------------------------
+
+
+
+
+# Step 6: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Station","Date","Hour")) %>%
 filter(is.finite(Flow)) %>%
@@ -119,5 +144,14 @@ mutate(`Flow Category` = as.factor(case_when(
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)")))
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv")
+
+
+
+# Step 7: Join with Stage Data and save DF ----------------------------------------------------
+
+RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
+left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute"))
+
+write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
 
 
