@@ -18,6 +18,8 @@ RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
 mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
 
+RPA_and_Flow_and_Stage <- read_csv("Data/RPA and Flow and Stage.csv")
+
 #RPA data
 RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
