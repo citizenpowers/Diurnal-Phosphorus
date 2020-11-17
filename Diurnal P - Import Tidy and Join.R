@@ -54,7 +54,7 @@ mutate(G379=rowSums(.[2:5],na.rm=TRUE))
 
 G334_BK <-mutate(G334_S_BK_1,date=mdy_hm(date))
 
-#analysis of flow over entire flowway
+#Combined flow over entire flowway
 Combined_BK_Flow <- G381_BK %>%  #combine data from G381, G334, G379D
 bind_rows(G379_BK) %>%
 bind_rows(G334_BK)  %>%
@@ -66,7 +66,7 @@ mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
 group_by(Station,Date,Hour) %>%
 summarise(Flow=mean(Flow,na.rm = TRUE),HLR=mean(HLR,na.rm=TRUE))
 
-#analysis of flow at closest gate only
+#Combined flow at closest gate only
 Combined_BK_Flow_closest_gate <- mutate(G381B_C_BK,date=dmy_hms(date)) %>%
 bind_rows(mutate(G379D_C_BK,date=mdy_hm(date))) %>%
 bind_rows(mutate(G334_S_BK_1,date=mdy_hm(date)))  %>%
@@ -103,8 +103,7 @@ mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*1
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv")
 
-# Step 4: Import and Tidy Stage Data ----------------------------------------------
-# Stage from G334_H,G379B_H, G381B_H
+# Step 4: Import and Tidy Stage from G334_H,G379B_H, G381B_H---------------------------
 
 G334_H_BK <- select(rename(read_csv("Data/G334_H_BK.csv",  skip = 2),date = 1,G334=4),1,4)
 
@@ -125,6 +124,17 @@ select(-date)
 # Step 5: Import and Tidy Sonde Data ----------------------------------------------
 
 
+
+# Step 6: Import and Tidy Weather Data ------------------------------------
+
+S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)
+
+Combined_Rain <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+full_join(mutate(S7_R_BK,date=dmy_hms(date)),by="date") %>%  
+arrange(date) %>%
+fill(`Rain S7`) %>% 
+mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
+select(-date)
 
 
 # Step 6: Join Flow and RPA data and save DF --------------------------------------
@@ -155,3 +165,9 @@ left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute"))
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
 
 
+# Step 8: Join with Weather data ------------------------------------------
+
+RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow %>%
+left_join(Combined_Rain ,by=c("Date","Hour","Minute"))
+
+write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv")

@@ -13,19 +13,29 @@ library(maptools)
 
 
 # Import data for RPA analysis -------------------------------------------------------------
-#saved RPA and flow DF. 
+#RPA raw data
+RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+
+#RPA tidy data
+RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
+
+#RPA and flow DF. 
 RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
 mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
 
+#RPA Flow and Stage Data
 RPA_and_Flow_and_Stage <- read_csv("Data/RPA and Flow and Stage.csv")
 
-#RPA data
-RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+#RPA Flow and Stage and weather data
+RPAs_with_Flow_Stage_Weather <- read_csv("Data/RPA and Flow Stage Weather.csv")
 
 #sta2 c3 =2400 acres
 #STA34 C3B 2087 acres
 #STA34 C2B 2375 acres
+
+# Date Range of RPA Data ------------------------------------------------------
+ggplot(pivot_longer(RPAs_Sorted,4:5,names_to="Analyte",values_to="Value") ,aes(Date,Value,color=Analyte))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
 
 # RPA TP Variation figures ------------------------------------------------------------
 
@@ -227,6 +237,23 @@ ggplot(RPA_Sorted_Daylight,aes(Hour,mean_Diff_24_hour_mean,color=Station))+facet
   labs(title="RPA Hourly TP Variation from the Daily Mean by Month with Daylight Hours",y="Deviation From Daily Mean (ug/L)")+theme_bw()
 
 ggsave("TP Variation from the Daily Mean Month with Daylight hours.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+
+# Weather effects on TP ---------------------------------------------------
+
+#Rain effect on TP Variation from the Daily Mean by Station
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Rain S7`,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+theme_bw()+geom_smooth(na.rm=TRUE)+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,.12),breaks = seq(0,.12,.01))+
+labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
+
+#Rain effect on TP Variation from the Daily Mean by Station boxplots
+ggplot(RPAs_with_Flow_Stage_Weather,aes(as.factor(`Rain S7`),Diff_24_hour_mean,color=Station))+geom_boxplot()+theme_bw()+
+scale_colour_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
+
 
 # Percent Flow by hour ----------------------------------------------------
 
