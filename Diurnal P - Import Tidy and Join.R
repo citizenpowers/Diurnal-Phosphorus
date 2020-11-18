@@ -134,10 +134,11 @@ full_join(mutate(S7_R_BK,date=dmy_hms(date)),by="date") %>%
 arrange(date) %>%
 fill(`Rain S7`) %>% 
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
-select(-date)
+group_by(Date) %>%
+mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",between(max(`Rain S7`),0,0.015)~ "0-.01 Rain Day",between(max(`Rain S7`),.015,0.045)~ "0.1-.04 Rain Day",max(`Rain S7`)>.04~ "> .04 Rain Day")) %>%
+select(-date) 
 
-
-# Step 6: Join Flow and RPA data and save DF --------------------------------------
+# Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Station","Date","Hour")) %>%
 filter(is.finite(Flow)) %>%

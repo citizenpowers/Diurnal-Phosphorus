@@ -241,19 +241,24 @@ ggsave("TP Variation from the Daily Mean Month with Daylight hours.jpeg", plot =
 
 # Weather effects on TP ---------------------------------------------------
 
-#Rain effect on TP Variation from the Daily Mean by Station
+#Instantaious Rain effect on TP Variation from the Daily Mean by Station
 ggplot(RPAs_with_Flow_Stage_Weather,aes(`Rain S7`,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+theme_bw()+geom_smooth(na.rm=TRUE)+
 scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
 geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,.12),breaks = seq(0,.12,.01))+
 labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
 
-#Rain effect on TP Variation from the Daily Mean by Station boxplots
+#Instantainous Rain effect on TP Variation from the Daily Mean by Station boxplots
 ggplot(RPAs_with_Flow_Stage_Weather,aes(as.factor(`Rain S7`),Diff_24_hour_mean,color=Station))+geom_boxplot()+theme_bw()+
 scale_colour_brewer( type = "qual", palette = "Set2")+
 geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
 
+#Effect of rainy days on diel P 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(`Rainy Day`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 # Percent Flow by hour ----------------------------------------------------
 
