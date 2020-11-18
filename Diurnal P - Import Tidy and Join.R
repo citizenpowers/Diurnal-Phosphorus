@@ -129,13 +129,27 @@ select(-date)
 
 S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)
 
+S7_E_BK <- select(rename(read_csv("Data/S7_E_BK.csv",  skip = 2),date = 1,"EVAP S7"=4),1,4)
+
 Combined_Rain <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
 full_join(mutate(S7_R_BK,date=dmy_hms(date)),by="date") %>%  
+full_join(mutate(S7_E_BK,date=dmy_hms(date)),by="date") %>%   
 arrange(date) %>%
-fill(`Rain S7`) %>% 
+fill(`Rain S7`) %>%       #This fills in with last known value. There may be better way to fill in NAs. D
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
 group_by(Date) %>%
-mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",between(max(`Rain S7`),0,0.015)~ "0-.01 Rain Day",between(max(`Rain S7`),.015,0.045)~ "0.1-.04 Rain Day",max(`Rain S7`)>.04~ "> .04 Rain Day")) %>%
+mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",
+                     between(max(`Rain S7`),0,0.015)~ "0-.01 Rain Day",
+                     between(max(`Rain S7`),.015,0.045)~ "0.01-.03 Rain Day",
+                     between(max(`Rain S7`),.045,0.095)~ "0.04-.09 Rain Day",
+                     max(`Rain S7`)>.095~ "0.10+ Rain Day")) %>%
+mutate(`Rainy Day` = factor(`Rainy Day`, levels = c("Dry Day", "0-.01 Rain Day", "0.01-.03 Rain Day","0.04-.09 Rain Day","0.10+ Rain Day"))) %>% 
+mutate(`Max Daily Evap` = case_when(between(max(`EVAP S7`,na.rm=TRUE),0,0.25)~ "0-.25 EVAP Day",
+                                between(max(`EVAP S7`,na.rm=TRUE),0.25,0.5)~ ".25-.5 EVAP Day",
+                                between(max(`EVAP S7`,na.rm=TRUE),.5,0.75)~ "0.5-.75 EVAP Day",
+                                between(max(`EVAP S7`,na.rm=TRUE),.75,1)~ "0.75-1.0 EVAP Day",
+                                max(`EVAP S7`,na.rm=TRUE)>1~ "1.0+ EVAP Day")) %>%
+mutate(`Max Daily Evap` = factor(`Max Daily Evap`, levels = c("0-.25 EVAP Day", ".25-.5 EVAP Day", "0.5-.75 EVAP Day","0.75-1.0 EVAP Day","1.0+ EVAP Day"))) %>% 
 select(-date) 
 
 # Step 7: Join Flow and RPA data and save DF --------------------------------------
@@ -158,7 +172,7 @@ write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv")
 
 
 
-# Step 7: Join with Stage Data and save DF ----------------------------------------------------
+# Step 8: Join with Stage Data and save DF ----------------------------------------------------
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
 left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute"))
@@ -166,7 +180,7 @@ left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute"))
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
 
 
-# Step 8: Join with Weather data ------------------------------------------
+# Step 9: Join with Weather data ------------------------------------------
 
 RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow %>%
 left_join(Combined_Rain ,by=c("Date","Hour","Minute"))

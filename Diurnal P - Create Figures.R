@@ -255,10 +255,24 @@ geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,
 labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
 
 #Effect of rainy days on diel P 
-ggplot(RPAs_with_Flow_Stage_Weather,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+ggplot(na.omit(RPAs_with_Flow_Stage_Weather),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_grid(`Rainy Day`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+labs(title="Rainy Days Affect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+ggsave("Rainy Days Affect on TP Variation.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Evaporation effect on TP Variation from the Daily Mean by Station boxplots
+ggplot(RPAs_with_Flow_Stage_Weather,aes(as.factor(`EVAP S7`),Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
+
+#Effect of max daily evaporation on diel P 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(`Max Daily Evap`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Max Daily Evaporation Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 # Percent Flow by hour ----------------------------------------------------
 
