@@ -119,6 +119,12 @@ arrange(date) %>%
 fill(G381,G379,G334) %>% 
 pivot_longer(2:4,names_to="Station",values_to="Stage") %>%
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
+group_by(Date) %>%
+mutate(`Max Daily Stage` = case_when(max(`Stage`,na.rm=TRUE)<10.5~ " < 10.5 Max Daily Stage ft",
+                                     between(max(`Stage`,na.rm=TRUE),10.5,11)~ "10.5-11 Max Daily Stage ft",
+                                     between(max(`Stage`,na.rm=TRUE),11,12)~ "11-12 Max Daily Stage ft",
+                                     max(`Stage`,na.rm=TRUE)>12~ "12+ Max Daily Stage ft")) %>%
+mutate(`Max Daily Stage` = factor(`Max Daily Stage`, levels = c(" < 10.5 Max Daily Stage ft", "10.5-11 Max Daily Stage ft", "11-12 Max Daily Stage ft","12+ Max Daily Stage ft"))) %>% 
 select(-date)
   
 # Step 5: Import and Tidy Sonde Data ----------------------------------------------
@@ -149,18 +155,18 @@ mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",
                      max(`Rain S7`)>.095~ "0.10+ Rain Day")) %>%
 mutate(`Rainy Day` = factor(`Rainy Day`, levels = c("Dry Day", "0-.01 Rain Day", "0.01-.03 Rain Day","0.04-.09 Rain Day","0.10+ Rain Day"))) %>% 
 mutate(`Max Daily Evap` = case_when(between(max(`EVAP S7`,na.rm=TRUE),0,0.249)~ "0-.25 EVAP Day",
-                                between(max(`EVAP S7`,na.rm=TRUE),0.25,0.499)~ ".25-.5 EVAP Day",
-                                between(max(`EVAP S7`,na.rm=TRUE),.5,0.749)~ "0.5-.75 EVAP Day",
-                                between(max(`EVAP S7`,na.rm=TRUE),.75,.999)~ "0.75-1.0 EVAP Day",
-                                max(`EVAP S7`,na.rm=TRUE)>1~ "1.0+ EVAP Day")) %>%
+                                    between(max(`EVAP S7`,na.rm=TRUE),0.25,0.499)~ ".25-.5 EVAP Day",
+                                    between(max(`EVAP S7`,na.rm=TRUE),.5,0.749)~ "0.5-.75 EVAP Day",
+                                    between(max(`EVAP S7`,na.rm=TRUE),.75,.999)~ "0.75-1.0 EVAP Day",
+                                    max(`EVAP S7`,na.rm=TRUE)>1~ "1.0+ EVAP Day")) %>%
 mutate(`Max Daily Evap` = factor(`Max Daily Evap`, levels = c("0-.25 EVAP Day", ".25-.5 EVAP Day", "0.5-.75 EVAP Day","0.75-1.0 EVAP Day","1.0+ EVAP Day"))) %>% 
 mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,4.999)~ "0-5 Max Daily Wind mph",
-                                      between(max(`WIND BELLEGLADE`,na.rm=TRUE),5,9.99)~ "5-10 Max Daily Wind mph",
-                                      between(max(`WIND BELLEGLADE`,na.rm=TRUE),10,14.99)~ "10-15 Max Daily Wind mph",
-                                      between(max(`WIND BELLEGLADE`,na.rm=TRUE),15,19.99)~ "15-20 Max Daily Wind mph",
-                                      max(`WIND BELLEGLADE`,na.rm=TRUE)>20~ "20+ Max Daily Wind mph")) %>%
+                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),5,9.99)~ "5-10 Max Daily Wind mph",
+                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),10,14.99)~ "10-15 Max Daily Wind mph",
+                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),15,19.99)~ "15-20 Max Daily Wind mph",
+                                    max(`WIND BELLEGLADE`,na.rm=TRUE)>20~ "20+ Max Daily Wind mph")) %>%
 mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-5 Max Daily Wind mph", "5-10 Max Daily Wind mph", "10-15 Max Daily Wind mph","15-20 Max Daily Wind mph","20+ Max Daily Wind mph"))) %>% 
-  select(-date) 
+select(-date) 
 
 # Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
@@ -185,7 +191,11 @@ write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv")
 # Step 8: Join with Stage Data and save DF ----------------------------------------------------
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
-left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute"))
+left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute")) %>%
+group_by(Station,Date) %>%
+mutate(`Stage_24_hour_mean`=mean(Stage)) %>%  
+mutate(Stage_Diff_24_hour_mean=Stage-`Stage_24_hour_mean`) 
+
 
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
 

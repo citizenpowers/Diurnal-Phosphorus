@@ -286,6 +286,30 @@ facet_grid(`Max Daily Wind`~Station)+scale_colour_brewer( type = "qual", palette
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Max Daily Wind Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
+# Stage Analysis ----------------------------------------------------------
+#Stage over time
+ggplot(RPAs_with_Flow_Stage_Weather,aes(Date,Stage,color=Station))+geom_point(size=.5)+theme_bw()
+
+#Stage histogram
+ggplot(RPAs_with_Flow_Stage_Weather,aes(Stage,fill=Station))+geom_histogram(alpha=.5)+theme_bw()+facet_wrap(~Station)
+
+#Stage effect on TP Variation from the Daily Mean by Station 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Stage`,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+labs(title="Stage Effect on Variation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Stage (ft)")
+
+#Effect of max daily Wind on diel P 
+ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Stage`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(`Max Daily Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Max Daily Wind Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+#Deviation from daily mean stage vs TP deviation from 24 hour mean 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Stage_Diff_24_hour_mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
+scale_y_continuous(limits = c(-25,25),breaks = seq(-25,25,5))+facet_wrap(~Station)+geom_point(aes(mean(`Stage_Diff_24_hour_mean`,na.rm=TRUE),mean(Diff_24_hour_mean,na.rm=TRUE)),color="black",size=2)
+
+
 # Percent Flow by hour ----------------------------------------------------
 
 
