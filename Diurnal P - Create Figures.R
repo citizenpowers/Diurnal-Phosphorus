@@ -25,7 +25,7 @@ mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (c
 mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
 
 #RPA Flow and Stage Data
-RPA_and_Flow_and_Stage <- read_csv("Data/RPA and Flow and Stage.csv")
+RPAs_with_Flow_Stage  <- read_csv("Data/RPA and Flow and Stage.csv")
 
 #RPA Flow and Stage and weather data
 RPAs_with_Flow_Stage_Weather <- read_csv("Data/RPA and Flow Stage Weather.csv")
@@ -273,6 +273,18 @@ ggplot(RPAs_with_Flow_Stage_Weather,aes(Time,Diff_24_hour_mean,color=Station))+g
 facet_grid(`Max Daily Evap`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Max Daily Evaporation Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+#Wind effect on TP Variation from the Daily Mean by Station boxplots
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`WIND BELLEGLADE`,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+labs(title="Wind Effect on Variation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Wind (MPH)")
+
+#Effect of max daily Wind on diel P 
+ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Wind`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(`Max Daily Wind`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Max Daily Wind Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 # Percent Flow by hour ----------------------------------------------------
 

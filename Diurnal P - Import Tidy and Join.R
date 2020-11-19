@@ -127,15 +127,19 @@ select(-date)
 
 # Step 6: Import and Tidy Weather Data ------------------------------------
 
-S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)
+S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)  #Rain data at S7
 
-S7_E_BK <- select(rename(read_csv("Data/S7_E_BK.csv",  skip = 2),date = 1,"EVAP S7"=4),1,4)
+S7_E_BK <- select(rename(read_csv("Data/S7_E_BK.csv",  skip = 2),date = 1,"EVAP S7"=4),1,4)  #Evaporation data at S7
 
-Combined_Rain <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+BELLW_WNVS_BK <- select(rename(read_csv("Data/BELLW_WNVS_BK.csv",  skip = 2),date = 1,"WIND BELLEGLADE"=4),1,4)  #Evaporation data at S7
+
+
+Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
 full_join(mutate(S7_R_BK,date=dmy_hms(date)),by="date") %>%  
 full_join(mutate(S7_E_BK,date=dmy_hms(date)),by="date") %>%   
+full_join(mutate(BELLW_WNVS_BK,date=dmy_hms(date)),by="date") %>%   
 arrange(date) %>%
-fill(`Rain S7`) %>%       #This fills in with last known value. There may be better way to fill in NAs. D
+fill(`Rain S7`,`WIND BELLEGLADE`) %>%       #This fills in chronologically with last known value for RAIN and WIND. Not sure that fill down is good idea for EVAP data
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
 group_by(Date) %>%
 mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",
@@ -144,13 +148,19 @@ mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",
                      between(max(`Rain S7`),.045,0.095)~ "0.04-.09 Rain Day",
                      max(`Rain S7`)>.095~ "0.10+ Rain Day")) %>%
 mutate(`Rainy Day` = factor(`Rainy Day`, levels = c("Dry Day", "0-.01 Rain Day", "0.01-.03 Rain Day","0.04-.09 Rain Day","0.10+ Rain Day"))) %>% 
-mutate(`Max Daily Evap` = case_when(between(max(`EVAP S7`,na.rm=TRUE),0,0.25)~ "0-.25 EVAP Day",
-                                between(max(`EVAP S7`,na.rm=TRUE),0.25,0.5)~ ".25-.5 EVAP Day",
-                                between(max(`EVAP S7`,na.rm=TRUE),.5,0.75)~ "0.5-.75 EVAP Day",
-                                between(max(`EVAP S7`,na.rm=TRUE),.75,1)~ "0.75-1.0 EVAP Day",
+mutate(`Max Daily Evap` = case_when(between(max(`EVAP S7`,na.rm=TRUE),0,0.249)~ "0-.25 EVAP Day",
+                                between(max(`EVAP S7`,na.rm=TRUE),0.25,0.499)~ ".25-.5 EVAP Day",
+                                between(max(`EVAP S7`,na.rm=TRUE),.5,0.749)~ "0.5-.75 EVAP Day",
+                                between(max(`EVAP S7`,na.rm=TRUE),.75,.999)~ "0.75-1.0 EVAP Day",
                                 max(`EVAP S7`,na.rm=TRUE)>1~ "1.0+ EVAP Day")) %>%
 mutate(`Max Daily Evap` = factor(`Max Daily Evap`, levels = c("0-.25 EVAP Day", ".25-.5 EVAP Day", "0.5-.75 EVAP Day","0.75-1.0 EVAP Day","1.0+ EVAP Day"))) %>% 
-select(-date) 
+mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,4.999)~ "0-5 Max Daily Wind mph",
+                                      between(max(`WIND BELLEGLADE`,na.rm=TRUE),5,9.99)~ "5-10 Max Daily Wind mph",
+                                      between(max(`WIND BELLEGLADE`,na.rm=TRUE),10,14.99)~ "10-15 Max Daily Wind mph",
+                                      between(max(`WIND BELLEGLADE`,na.rm=TRUE),15,19.99)~ "15-20 Max Daily Wind mph",
+                                      max(`WIND BELLEGLADE`,na.rm=TRUE)>20~ "20+ Max Daily Wind mph")) %>%
+mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-5 Max Daily Wind mph", "5-10 Max Daily Wind mph", "10-15 Max Daily Wind mph","15-20 Max Daily Wind mph","20+ Max Daily Wind mph"))) %>% 
+  select(-date) 
 
 # Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
@@ -182,7 +192,7 @@ write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
 
 # Step 9: Join with Weather data ------------------------------------------
 
-RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow %>%
-left_join(Combined_Rain ,by=c("Date","Hour","Minute"))
+RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow_Stage %>%
+left_join(Combined_Weather ,by=c("Date","Hour","Minute"))
 
 write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv")
