@@ -64,6 +64,8 @@ mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
 group_by(Station,Date,Hour) %>%
 summarise(Flow=mean(Flow,na.rm = TRUE),HLR=mean(HLR,na.rm=TRUE))
 
+write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv")
+
 #Combined flow at closest gate only
 Combined_BK_Flow_closest_gate <- mutate(G381B_C_BK,date=dmy_hms(date)) %>%
 bind_rows(mutate(G379D_C_BK,date=mdy_hm(date))) %>%
@@ -126,8 +128,12 @@ mutate(`Max Daily Stage` = factor(`Max Daily Stage`, levels = c(" < 10.5 Max Dai
 select(-date)
   
 # Step 4: Import and Tidy Sonde Data ----------------------------------------------
+SONDE_DATA <- read_csv("Data/SONDE_DATA.csv") 
 
-
+Sonde_Tidy <- SONDE_DATA  %>%
+mutate(date=mdy_hm(`Date/Time`),Date=as.Date(date),Hour=hour(date),Year=year(date),Minute=minute(date),Day=day(date)) %>%
+group_by(Date,Hour,Station) %>%
+summarise(`Avg Hourly Temp`=mean(Temp,na.rm = TRUE),`Avg Hourly SpCond`=mean(`SpCond`,na.rm = TRUE),`Avg Hourly DO`=mean(`DO Conc`,na.rm = TRUE),`Avg Hourly pH`=mean(pH,na.rm = TRUE))
 
 # Step 5: Import and Tidy Weather Data ------------------------------------
 
@@ -198,9 +204,19 @@ mutate(Stage_Diff_24_hour_mean=Stage-`Stage_24_hour_mean`)
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
 
 
-# Step 9: Join with Weather data ------------------------------------------
+# Step 8: Join with Weather data ------------------------------------------
 
 RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow_Stage %>%
 left_join(Combined_Weather ,by=c("Date","Hour","Minute"))
 
 write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv")
+
+
+# Step 9: Join with Sonde Data --------------------------------------------
+
+RPAs_with_Flow_Stage_Weather_Sonde <- RPAs_with_Flow_Stage_Weather %>%
+left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))
+
+write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather Sonde.csv")
+
+

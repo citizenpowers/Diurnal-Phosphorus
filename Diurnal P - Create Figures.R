@@ -19,6 +19,9 @@ RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric
 #RPA tidy data
 RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
 
+#Import Flow Data
+Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv")
+
 #RPA and flow DF. 
 RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
@@ -318,16 +321,31 @@ scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+geom_smooth(method
 facet_wrap(~Station)+geom_hline(aes(yintercept = 0))+
 stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right", label.y.npc = 0.15,formula = formula, parse = TRUE, size = 3)
 
+
+# Sonde Analysis ----------------------------------------------------------
+
+Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,31:34,names_to="Parameter",values_to="Value"),is.finite(Value))
+
+#Sonde parameters over time
+ggplot(Sonde_only,aes(Date,Value,color=Station))+
+geom_point()+theme_bw()+facet_wrap(~Parameter,scales = "free")
+
+#Sonde 
+ggplot(Sonde_only,aes(Value,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+facet_wrap(~Parameter,scales = "free")+geom_smooth(method="lm")+
+scale_y_continuous(limits = c(-5,5),breaks = seq(-5,5,1))+scale_colour_brewer( type = "qual", palette = "Set2")
+
 # Percent Flow by hour ----------------------------------------------------
 
-#percentage of flow by hour
-Percent_flow  <- RPAs_with_Flow_Stage_Weather %>%
-group_by(Station,Year,Day,Hour) %>%
-summarise(n=n(),`Cumulative Cubic ft`=sum(Flow*60,na.rm=TRUE))
-
 
 #percentage of flow by hour
-Percent_flow  <- RPAs_with_Flow_Stage_Weather %>%
+Total_Flow_Hour<- Combined_BK_Flow %>%
+mutate(Year=year(Date)) %>%
+group_by(Station,Hour,Year) %>%
+summarise(n=n(),`Total Cubic ft`=sum(Flow*60,na.rm=TRUE),`Average cfs`=mean(Flow,na.rm=TRUE),`Total Acre ft`=sum(`Flow`*60*2.2957e-5,na.rm=TRUE),`Average Acre ft`=mean(`Flow`*60*2.2957e-5,na.rm=TRUE))
+
+#percentage of flow by hour
+Percent_flow  <- Combined_BK_Flow %>%
+mutate(Year=year(Date)) %>%
 group_by(Station,Year) %>%
 summarise(n=n(),`Cumulative Cubic ft`=sum(Flow*60,na.rm=TRUE)) %>%
 right_join(Total_Flow_Hour,by =c("Station","Year")) %>%
@@ -337,7 +355,7 @@ mutate(`Percent Flow by Hour`=`Total Cubic ft`/`Cumulative Cubic ft`)
 #percentage of flow by hour
 ggplot(Percent_flow,aes(as.factor(Hour),`Percent Flow by Hour`,fill=Station,color=Station))+geom_point()+theme_bw()+facet_wrap(~Year,nrow = 1)+
 scale_color_brewer( type = "qual", palette = "Set2")+scale_x_discrete(limits=paste("",seq(0,24,1),sep=""),breaks =seq(0,24,4))+
-theme(axis.text.x=element_text(angle=90,hjust=1,vjust = .5))+scale_y_continuous(labels = percent)+
+theme(axis.text.x=element_text(angle=90,hjust=1,vjust = .5))+scale_y_continuous(labels = percent,limits = c(0,.1))+
 labs(title="Percent Flow by Hour",y="Percent %",x="Hour")
 
 ggsave("Percent Flow by Hour.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
@@ -347,13 +365,12 @@ Percent_flow_day  <- Percent_flow  %>%
 group_by(Station, Year,`Day or Night` ) %>%
 summarise(n=n(),`Percent Flow`=sum(`Percent Flow by Hour`,na.rm=TRUE)) 
 
-ggplot(Percent_flow_day ,aes(`Day or Night`,`Percent Flow`,fill=Station))+geom_col(position="dodge")+theme_bw()+facet_grid(~Year)+
-scale_fill_brewer( type = "qual", palette = "Set2")+geom_text(aes(label = percent(`Percent Flow`)),position = position_dodge(1),vjust = -.5)+
-theme(axis.text.x=element_text(angle=90,hjust=1,vjust = .5))+scale_y_continuous(labels = percent)+
+ggplot(filter(Percent_flow_day,is.finite(`Year`)),aes(`Day or Night`,`Percent Flow`,fill=Station))+geom_col(position="dodge")+theme_bw()+facet_grid(~Year)+
+scale_fill_brewer( type = "qual", palette = "Set2")+geom_text(aes(label = percent(`Percent Flow`,accuracy = 0.1)),position = position_dodge(1),vjust = -.5)+
+theme(axis.text.x=element_text(angle=90,hjust=1,vjust = .5))+scale_y_continuous(labels = scales::percent_format(accuracy = 3L))+
 labs(title="Percentage Flow during Day and Night ",y="Percent Flow %",x="")
 
 ggsave("Percent Flow day or night.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
 
 # closest gate analysis (needs work) ---------------------------------------------------
 
