@@ -133,8 +133,12 @@ SONDE_DATA <- read_csv("Data/SONDE_DATA.csv")
 Sonde_Tidy <- SONDE_DATA  %>%
 mutate(date=mdy_hm(`Date/Time`),Date=as.Date(date),Hour=hour(date),Year=year(date),Minute=minute(date),Day=day(date)) %>%
 group_by(Date,Hour,Station) %>%
-summarise(`Avg Hourly Temp`=mean(Temp,na.rm = TRUE),`Avg Hourly SpCond`=mean(`SpCond`,na.rm = TRUE),`Avg Hourly DO`=mean(`DO Conc`,na.rm = TRUE),`Avg Hourly pH`=mean(pH,na.rm = TRUE))
-
+summarise(`Avg Hourly Temp`=mean(Temp,na.rm = TRUE),`Avg Hourly SpCond`=mean(`SpCond`,na.rm = TRUE),`Avg Hourly DO`=mean(`DO Conc`,na.rm = TRUE),`Avg Hourly pH`=mean(pH,na.rm = TRUE)) %>%
+group_by(Date,Station) %>%
+mutate(Temp_Diff_24_hour_mean=`Avg Hourly Temp`-mean(`Avg Hourly Temp`),SpCond_Diff_24_hour_mean=`Avg Hourly SpCond`-mean(`Avg Hourly SpCond`),
+DO_Diff_24_hour_mean=`Avg Hourly DO`-mean(`Avg Hourly DO`),pH_Diff_24_hour_mean=`Avg Hourly pH`-mean(`Avg Hourly pH`)) 
+  
+  
 # Step 5: Import and Tidy Weather Data ------------------------------------
 
 S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)  #Rain data at S7

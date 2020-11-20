@@ -324,7 +324,7 @@ stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.
 
 # Sonde Analysis ----------------------------------------------------------
 
-Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,31:34,names_to="Parameter",values_to="Value"),is.finite(Value))
+Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,31:38,names_to="Parameter",values_to="Value"),is.finite(Value))
 
 #Sonde parameters over time
 ggplot(Sonde_only,aes(Date,Value,color=Station))+
