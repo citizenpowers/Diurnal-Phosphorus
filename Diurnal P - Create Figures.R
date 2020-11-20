@@ -9,7 +9,7 @@ library(ggplot2)
 library(lubridate)
 library(tidyr)
 library(maptools)
-
+library(ggpmisc)
 
 
 # Import data for RPA analysis -------------------------------------------------------------
@@ -299,7 +299,7 @@ scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1
 geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 labs(title="Stage Effect on Variation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Stage (ft)")
 
-#Effect of max daily Wind on diel P 
+#Effect of max daily Stage on diel P 
 ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Stage`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_grid(`Max Daily Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
@@ -307,14 +307,27 @@ labs(title="Max Daily Wind Effect on Diel P",y="TPO4 Deviation from daily mean (
 
 #Deviation from daily mean stage vs TP deviation from 24 hour mean 
 ggplot(RPAs_with_Flow_Stage_Weather,aes(`Stage_Diff_24_hour_mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
-scale_y_continuous(limits = c(-25,25),breaks = seq(-25,25,5))+facet_wrap(~Station)+geom_point(aes(mean(`Stage_Diff_24_hour_mean`,na.rm=TRUE),mean(Diff_24_hour_mean,na.rm=TRUE)),color="black",size=2)
+scale_y_continuous(limits = c(-25,25),breaks = seq(-25,25,5))+geom_smooth(color="black")+
+facet_wrap(~Station)+geom_point(aes(mean(`Stage_Diff_24_hour_mean`,na.rm=TRUE),mean(Diff_24_hour_mean,na.rm=TRUE)),color="black",size=2,shape=3)+
+geom_hline(aes(yintercept = 0))
 
+#Deviation from daily mean stage vs TP deviation from 24 hour mean. Filter only days of stage change greater than 1 inch
+formula <- y ~ x
+ggplot(filter(RPAs_with_Flow_Stage_Weather,abs(`Stage_Diff_24_hour_mean`)>.083),aes(`Stage_Diff_24_hour_mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+geom_smooth(method="lm",color="black")+
+facet_wrap(~Station)+geom_hline(aes(yintercept = 0))+
+stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right", label.y.npc = 0.15,formula = formula, parse = TRUE, size = 3)
 
 # Percent Flow by hour ----------------------------------------------------
 
+#percentage of flow by hour
+Percent_flow  <- RPAs_with_Flow_Stage_Weather %>%
+group_by(Station,Year,Day,Hour) %>%
+summarise(n=n(),`Cumulative Cubic ft`=sum(Flow*60,na.rm=TRUE))
+
 
 #percentage of flow by hour
-Percent_flow  <- Total_Flow %>%
+Percent_flow  <- RPAs_with_Flow_Stage_Weather %>%
 group_by(Station,Year) %>%
 summarise(n=n(),`Cumulative Cubic ft`=sum(Flow*60,na.rm=TRUE)) %>%
 right_join(Total_Flow_Hour,by =c("Station","Year")) %>%
