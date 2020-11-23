@@ -33,6 +33,9 @@ RPAs_with_Flow_Stage  <- read_csv("Data/RPA and Flow and Stage.csv")
 #RPA Flow and Stage and weather data
 RPAs_with_Flow_Stage_Weather <- read_csv("Data/RPA and Flow Stage Weather.csv")
 
+#Import RPA Flow and Stage and weather data
+RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv")
+
 #sta2 c3 =2400 acres
 #STA34 C3B 2087 acres
 #STA34 C2B 2375 acres
@@ -324,7 +327,7 @@ stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.
 
 # Sonde Analysis ----------------------------------------------------------
 
-Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,31:38,names_to="Parameter",values_to="Value"),is.finite(Value))
+Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,32:39,names_to="Parameter",values_to="Value"),is.finite(Value))
 
 #Sonde parameters over time
 ggplot(Sonde_only,aes(Date,Value,color=Station))+
