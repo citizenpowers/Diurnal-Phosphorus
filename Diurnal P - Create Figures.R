@@ -43,6 +43,9 @@ RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather 
 # Date Range of RPA Data ------------------------------------------------------
 ggplot(pivot_longer(RPAs_Sorted,4:5,names_to="Analyte",values_to="Value") ,aes(Date,Value,color=Analyte))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
 
+ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+
 # RPA TP Variation figures ------------------------------------------------------------
 
 #Hourly TP Variation from the Daily Mean by Station
@@ -51,7 +54,7 @@ facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
-ggsave("Hourly TP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly % TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
@@ -59,7 +62,7 @@ facet_wrap(~Station,nrow=1)+scale_colour_brewer( type = "qual", palette = "Set2"
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Percent Variation from Daily Mean by Hour",y="TPO4 Percent Deviation from Daily (%)",x="Hour")
 
-ggsave("Hourly Percent Variation in TP from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Hourly Percent Variation in TP from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly TP Variation from the Daily Mean by Station and month
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
