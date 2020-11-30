@@ -1,6 +1,18 @@
 # Diurnal-Phosphorus
 
-Figures with Description
+Description of scripts 
+
+Diurnal P - Import and Join.R - Imports, tidys, joins, then saves data (Only needs to be run once to create master dataframe frow which figures can be created) 
+
+Diurnal P- Create figures.R - Create figures that attempt to visualize  
+
+Diurnal P- Models.R - Attempts to model diel P pattern. Perhaps model P concentration uding Diel P model + other factors.
+
+Diurnal P- Flow Scenarios.R - Calculates P load and FWM concentrations under alternative flow scenarios. 
+
+
+
+Description of Figures
 
 Date Range of RPA Data- Shows Date Range of RPA data. RPA data from stations from different time periods. 
 
