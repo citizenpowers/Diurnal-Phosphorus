@@ -61,3 +61,6 @@ Sonde Parameters vs Deviation in Daily P- Surprisingly did not see strong relati
 Percent Flow by Hour- Most flow occurs during daytime when deviation from daily P is at Highest!
 
 Percent Flow day or night- Column chart of percent flow. Same finding as above. 
+
+P Load Scenarios G379, G381, G379- Line chart shows P load under different flow scenarios. Scenarios where flow occurs majority at night have lowest P load.
+
