@@ -234,14 +234,14 @@ labs(title="Wind Effect on P Variation from Daily Mean",y="TPO4 Deviation from d
 
 ggsave("Figures/Wind Effect on P Variation from Daily Mean.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-
 #Effect of max daily Wind on diel P 
-ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Wind`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+ggplot(filter(RPAs_with_Flow_Stage_Weather,!is.na(`Max Daily Wind`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_grid(`Max Daily Wind`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Max Daily Wind Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Max Daily Wind Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
 
 # Stage Analysis ----------------------------------------------------------
 #Stage over time
