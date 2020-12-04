@@ -45,6 +45,17 @@ ggplot(pivot_longer(RPAs_Sorted,4:5,names_to="Analyte",values_to="Value") ,aes(D
 
 ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+#Hour at which samples were collected over time 
+ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
+
+RPA_summary <-RPAs_Sorted %>%
+mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
+group_by(Hour,Station,date) %>%
+summarise(`Number of Observations`=sum(!is.na(TPO4)))
+
+ggplot(RPA_summary,aes(date,Hour,fill=-`Number of Observations`))+geom_raster()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
+
+
 
 # RPA TP Variation figures ------------------------------------------------------------
 
