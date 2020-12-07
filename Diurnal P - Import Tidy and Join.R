@@ -101,7 +101,7 @@ mutate(`24_hour_mean`=mean(TPO4)) %>%
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
 
-write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv")
+write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
 
 # Step 3: Import and Tidy Stage from G334_H,G379B_H, G381B_H---------------------------
 
@@ -176,7 +176,35 @@ mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,
 mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-5 Max Daily Wind mph", "5-10 Max Daily Wind mph", "10-15 Max Daily Wind mph","15-20 Max Daily Wind mph","20+ Max Daily Wind mph"))) %>% 
 select(-date) 
 
-# Step 6: Join Flow and RPA data and save DF --------------------------------------
+# Step 6: Import and Tidy Inflow P Data ------------------------------------
+
+G378B_Midflow_TP <- read_csv("Data/G378B_Midflow_TP.csv")
+G384B_Midflow <- read_csv("Data/G384B Midflow.csv")
+G333C_Inflow <- read_csv("Data/G333C Inflow.csv")
+
+G378B_tidy <- G378B_Midflow_TP %>%
+  mutate(date=dmy_hm(`Collection_Date`)) %>%
+  mutate(`Storet Code`=as.character(`Storet Code`))
+
+G384B_tidy <- G384B_Midflow %>%
+  mutate(date=mdy_hm(`Collection_Date`)) %>%
+  mutate(`Storet Code`=as.character(`Storet Code`))
+
+G333C_tidy <- G333C_Inflow %>%
+  mutate(date=mdy_hm(`Collection_Date`)) %>%
+  mutate(`Storet Code`=as.character(`Storet Code`))
+
+Inflow_TP_Data <-G378B_tidy %>%
+  bind_rows(G333C_tidy) %>%
+  bind_rows(G384B_tidy ) %>%
+  filter(`Collection Method`=="G",`Sample Type New`=="SAMP") %>%
+  mutate(Date=as.Date(date),Year=year(date),Hour=hour(date),Month=month(Date,label=TRUE),`Inflow TP`=Value*1000) %>%
+  mutate(`Flowway` = case_when(`Station ID`=="G333C"~"STA-2C3",`Station ID`=="G378B"~"STA-3/4C2",`Station ID`=="G384B"~"STA-3/4C3")) %>%
+  select(Date,date,Year,Month,Hour,`Station ID`,Flowway,`Inflow TP`)
+
+
+
+# Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Station","Date","Hour")) %>%
 filter(is.finite(Flow)) %>%
@@ -192,11 +220,11 @@ mutate(`Flow Category` = as.factor(case_when(
     Flow<0 ~ "Reverse Flow"))) %>%
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)")))
 
-write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv")
+write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
 
 
-# Step 7: Join with Stage Data and save DF ----------------------------------------------------
+# Step 8: Join with Stage Data and save DF ----------------------------------------------------
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
 left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute")) %>%
@@ -205,22 +233,33 @@ mutate(`Stage_24_hour_mean`=mean(Stage)) %>%
 mutate(Stage_Diff_24_hour_mean=Stage-`Stage_24_hour_mean`) 
 
 
-write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv")
+write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv",row.names=FALSE)
 
 
-# Step 8: Join with Weather data ------------------------------------------
+# Step 9: Join with Weather data ------------------------------------------
 
 RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow_Stage %>%
 left_join(Combined_Weather ,by=c("Date","Hour","Minute"))
 
-write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv")
+write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv",row.names=FALSE)
 
 
-# Step 9: Join with Sonde Data --------------------------------------------
+# Step 10: Join with Sonde Data --------------------------------------------
 
 RPAs_with_Flow_Stage_Weather_Sonde <- RPAs_with_Flow_Stage_Weather %>%
 left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))
 
-write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather Sonde.csv")
+write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather Sonde.csv",row.names=FALSE)
+
+
+
+
+
+# Step 11: Join with Inflow Data ------------------------------------------
+RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- RPAs_with_Flow_Stage_Weather_Sonde %>%
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3")) %>%
+left_join(Inflow_TP_Data ,by=c("Date","Hour","Month","Year","Flowway"))
+
+write.csv(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP, "Data/RPA and Flow Stage Weather Sonde Inflow TP.csv",row.names=FALSE)
 
 

@@ -36,12 +36,15 @@ RPAs_with_Flow_Stage_Weather <- read_csv("Data/RPA and Flow Stage Weather.csv")
 #Import RPA Flow and Stage and weather data
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv")
 
+#Import RPA Flow and Stage and weather ands Inflow TP data
+RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- read_csv("Data/RPA and Flow Stage Weather Sonde Inflow TP.csv")
+
 #sta2 c3 =2400 acres
 #STA34 C3B 2087 acres
 #STA34 C2B 2375 acres
 
 # Date Range of RPA Data ------------------------------------------------------
-ggplot(pivot_longer(RPAs_Sorted,4:5,names_to="Analyte",values_to="Value") ,aes(Date,Value,color=Analyte))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
+ggplot(pivot_longer(RPAs_Sorted,3:4,names_to="Analyte",values_to="Value") ,aes(Date,Value,color=Analyte))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
 
 ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
@@ -298,7 +301,7 @@ ggsave("Figures/Change in Stage Effect on Diel P from days of over 1 inch stage 
 
 # Sonde Analysis ----------------------------------------------------------
 
-Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,32:39,names_to="Parameter",values_to="Value"),is.finite(Value))
+Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,31:38,names_to="Parameter",values_to="Value"),is.finite(Value))
 
 #Sonde parameters over time
 ggplot(Sonde_only,aes(Date,Value,color=Station))+
@@ -350,6 +353,21 @@ theme(axis.text.x=element_text(angle=90,hjust=1,vjust = .5))+scale_y_continuous(
 labs(title="Percentage Flow during Day and Night ",y="Percent Flow %",x="")
 
 ggsave("Figures/Percent Flow day or night.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+
+# Compare inflow data to outflow data -------------------------------------
+
+ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,Flowway=="STA-2C3",Date>"2017-01-01"),aes(Date,TPO4))+geom_point(shape=1)+theme_bw()+geom_point(aes(Date,`Inflow TP`),color="red")+
+facet_grid(.~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+
+test <- filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,!is.na(`Inflow TP`))
+
+
+ggplot(test,aes(`Inflow TP`,TPO4))+geom_point(shape=1)+geom_smooth()
+
+
 
 # closest gate analysis (needs work) ---------------------------------------------------
 
