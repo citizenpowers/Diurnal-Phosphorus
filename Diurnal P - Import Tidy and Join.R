@@ -79,11 +79,17 @@ summarise(Flow=mean(Flow,na.rm = TRUE))
 
 # Step 2: Import and Tidy RPA data  --------------------------------------
 
-#RPA data
+#RPA data from outflows 
 RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
-
+#RPA data from inflows
+RPAs_midflow <- read_csv("Data/G384C_TP.csv") %>%
+select(SITE_NAME,COLLECT_DATE,TRP,TP)  %>%
+rename(Station="SITE_NAME",Date="COLLECT_DATE",TPO4="TP")
+  
+  
 RPAs_Sorted <- RPAs %>%
+bind_rows(RPAs_midflow)  %>%
 filter(!is.na(TPO4)) %>%
 mutate(Month=month(Date,label=TRUE)) %>%
 mutate(Day=day(Date)) %>%
@@ -92,7 +98,7 @@ mutate(Year=year(Date)) %>%
 mutate(Hour=hour(Date)) %>%
 mutate(Minute=minute(Date)) %>%  
 mutate(Date=as.Date(Date)) %>%
-mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334")) %>%
+mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384")) %>%
 group_by(Station,Year,Day,Month) %>%
 mutate(RANK=row_number(TPO4))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
