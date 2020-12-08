@@ -362,6 +362,15 @@ ggplot(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,aes(Date,TPO4))+geom_point(s
 facet_wrap(~Flowway,ncol=1)+scale_colour_brewer( type = "qual", palette = "Set2")+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Ddate")
 
+#RPA data from inflow and RPA data from outflow
+RPAs_Sorted_flowpath <- RPAs_Sorted %>%
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3",`Station`=="G380"~"STA-3/4C3",`Station`=="G384"~"STA-3/4C3")) %>%        #Add flowway info to RPA data
+mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow"))        #Add flowpath position
+
+ggplot(RPAs_Sorted_flowpath ,aes(Date,TPO4,color=`Flowpath Region`))+geom_point(shape=1)+theme_bw()+geom_point()+
+facet_wrap(~Flowway,ncol=1)+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Ddate")
+
 #inflow TP is < than outlow TP! what is happening in STA-3/4 central flowway?
 ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,Flowway=="STA-3/4C2"),aes(Date,TPO4))+geom_point(shape=1)+theme_bw()+geom_point(aes(Date,`Inflow TP`),color="red")+
 facet_wrap(~Flowway,ncol=1)+scale_colour_brewer( type = "qual", palette = "Set2")+

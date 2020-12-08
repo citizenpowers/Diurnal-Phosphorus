@@ -84,6 +84,7 @@ RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric
 
 #RPA data from inflows
 RPAs_midflow <- read_csv("Data/G384C_TP.csv") %>%
+bind_rows(read_csv("Data/G380C_TP.csv"))   %>%
 select(SITE_NAME,COLLECT_DATE,TRP,TP)  %>%
 rename(Station="SITE_NAME",Date="COLLECT_DATE",TPO4="TP")
   
@@ -98,7 +99,7 @@ mutate(Year=year(Date)) %>%
 mutate(Hour=hour(Date)) %>%
 mutate(Minute=minute(Date)) %>%  
 mutate(Date=as.Date(Date)) %>%
-mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384")) %>%
+mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380")) %>%
 group_by(Station,Year,Day,Month) %>%
 mutate(RANK=row_number(TPO4))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
@@ -182,7 +183,7 @@ mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,
 mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-5 Max Daily Wind mph", "5-10 Max Daily Wind mph", "10-15 Max Daily Wind mph","15-20 Max Daily Wind mph","20+ Max Daily Wind mph"))) %>% 
 select(-date) 
 
-# Step 6: Import and Tidy Inflow P Data ------------------------------------
+# Step 6: Import and Tidy Inflow P Data from compliance sites ------------------------------------
 
 G378B_Midflow_TP <- read_csv("Data/G378B_Midflow_TP.csv")
 G384B_Midflow <- read_csv("Data/G384B Midflow.csv")
@@ -211,7 +212,7 @@ Inflow_TP_Data <-G378B_tidy %>%
 # Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Station","Date","Hour")) %>%
-filter(is.finite(Flow)) %>%
+filter(is.finite(Flow)) %>%     #need inflow data
 mutate(Flow=as.numeric(Flow)) %>%
 mutate(Season=if_else(between(month(Date),5,11),"Wet Season","Dry Season")) %>%
 mutate(`Flow Category` = as.factor(case_when( 
@@ -225,8 +226,6 @@ mutate(`Flow Category` = as.factor(case_when(
 mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)")))
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
-
-
 
 # Step 8: Join with Stage Data and save DF ----------------------------------------------------
 
@@ -255,13 +254,10 @@ left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))
 
 write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather Sonde.csv",row.names=FALSE)
 
-
-
-
-
 # Step 11: Join with Inflow Data ------------------------------------------
 RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- RPAs_with_Flow_Stage_Weather_Sonde %>%
-mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3")) %>%        #Add flowway info to RPA data
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3",`Station`=="G380"~"STA-3/4C3",`Station`=="G384"~"STA-3/4C3")) %>%        #Add flowway info to RPA data
+mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow")) %>%        #Add flowpath position
 left_join(Inflow_TP_Data ,by=c("Date","Month","Year","Flowway"))   %>%  #When joining this data the compliance sample is joined to every RPA sample collected on the date. 
 mutate(`Closest Hour`=(Hour.x+Minute.x/60)-(Hour.y+Minute.y/60)) %>%    #calculate time difference between compliance sample and RPA samples
 group_by(Station,Date) %>%                                              #group by date
