@@ -357,16 +357,19 @@ ggsave("Figures/Percent Flow day or night.jpeg", plot = last_plot(), width = 11.
 
 # Compare inflow data to outflow data -------------------------------------
 
-ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,Flowway=="STA-2C3",Date>"2017-01-01"),aes(Date,TPO4))+geom_point(shape=1)+theme_bw()+geom_point(aes(Date,`Inflow TP`),color="red")+
-facet_grid(.~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2")+
-labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+#Pretty good coverage of RPA data with compliance data
+ggplot(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,aes(Date,TPO4))+geom_point(shape=1)+theme_bw()+geom_point(aes(Date,`Inflow TP`),color="red")+
+facet_wrap(~Flowway,ncol=1)+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Ddate")
 
+#inflow TP is < than outlow TP! what is happening in STA-3/4 central flowway?
+ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,Flowway=="STA-3/4C2"),aes(Date,TPO4))+geom_point(shape=1)+theme_bw()+geom_point(aes(Date,`Inflow TP`),color="red")+
+facet_wrap(~Flowway,ncol=1)+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Date")
 
-test <- filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,!is.na(`Inflow TP`))
-
-
-ggplot(test,aes(`Inflow TP`,TPO4))+geom_point(shape=1)+geom_smooth()
-
+#Strong linear realtionships fror the flowways in STA-3/4
+ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,!is.na(`Inflow TP`)),aes(`Inflow TP`,TPO4,color=Flowway))+geom_point(shape=1)+geom_smooth(method="lm")+
+stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right",formula =y~x, parse = TRUE, size = 3)+theme_bw()+labs(y="Outflow TP (ug/L)",x="Inflow TP (ug/L)")
 
 
 # closest gate analysis (needs work) ---------------------------------------------------

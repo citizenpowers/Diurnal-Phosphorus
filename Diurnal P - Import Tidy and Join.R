@@ -198,11 +198,9 @@ Inflow_TP_Data <-G378B_tidy %>%
   bind_rows(G333C_tidy) %>%
   bind_rows(G384B_tidy ) %>%
   filter(`Collection Method`=="G",`Sample Type New`=="SAMP") %>%
-  mutate(Date=as.Date(date),Year=year(date),Hour=hour(date),Month=month(Date,label=TRUE),`Inflow TP`=Value*1000) %>%
+  mutate(Date=as.Date(date),Year=year(date),Hour=hour(date),Month=month(Date,label=TRUE),Minute=minute(Date),`Inflow TP`=Value*1000) %>%
   mutate(`Flowway` = case_when(`Station ID`=="G333C"~"STA-2C3",`Station ID`=="G378B"~"STA-3/4C2",`Station ID`=="G384B"~"STA-3/4C3")) %>%
-  select(Date,date,Year,Month,Hour,`Station ID`,Flowway,`Inflow TP`)
-
-
+  select(Date,date,Year,Month,Hour,Minute,`Station ID`,Flowway,`Inflow TP`)
 
 # Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
@@ -257,8 +255,13 @@ write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather S
 
 # Step 11: Join with Inflow Data ------------------------------------------
 RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- RPAs_with_Flow_Stage_Weather_Sonde %>%
-mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3")) %>%
-left_join(Inflow_TP_Data ,by=c("Date","Hour","Month","Year","Flowway"))
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3")) %>%        #Add flowway info to RPA data
+left_join(Inflow_TP_Data ,by=c("Date","Month","Year","Flowway"))   %>%  #When joining this data the compliance sample is joined to every RPA sample collected on the date. 
+mutate(`Closest Hour`=(Hour.x+Minute.x/60)-(Hour.y+Minute.y/60)) %>%    #calculate time difference between compliance sample and RPA samples
+group_by(Station,Date) %>%                                              #group by date
+mutate(`Closest time rank`=row_number(abs(`Closest Hour`)))  %>%        #Rank the time differences 
+mutate(`Inflow TP`=ifelse(`Closest time rank`==1,`Inflow TP`, NA)) %>%  #Keep compliance sample at closest time diffrence only. 
+ungroup()
 
 write.csv(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP, "Data/RPA and Flow Stage Weather Sonde Inflow TP.csv",row.names=FALSE)
 
