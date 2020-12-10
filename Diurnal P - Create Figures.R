@@ -70,6 +70,15 @@ labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean
 
 ggsave("Figures/Hourly TP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+#Hourly TP Variation from the Daily Mean by Flowpath and POsition
+ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(Flowway~`Flowpath Region`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Flowway and Region.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+
 #Hourly % TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_wrap(~Station,nrow=1)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits=c(-50,50),breaks = seq(-50,50,5))+
@@ -86,15 +95,22 @@ labs(title="TP Variation from Daily by Station and Month",y="TPO4 Deviation from
 
 ggsave("Figures/Hourly TP Variation from the Daily Mean by Station and Month.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Figure flow category and difference from the daily mean
-ggplot(RPAs_with_Flow,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+geom_hline(yintercept=0)+
-facet_grid(Station~`Flow Category`,scales = "free_x")+scale_colour_brewer( type = "qual", palette = "Set2")+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,2))+theme_bw()+
+#Figure flow category and difference from the daily mean OutFLOW stations only
+ggplot(filter(RPAs_with_Flow,!is.na(`Outflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+geom_hline(yintercept=0)+
+facet_grid(Station~`Outflow Category`,scales = "free_x")+scale_colour_brewer( type = "qual", palette = "Set2")+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,2))+theme_bw()+
+labs(title="TPO4 Deviation from Daily Mean by Station and Flow Category",y="Deviation from Daily Mean TPO4 (ug/L)",x="Hour")
+
+ggsave("Figures/TPO4 Deviation from Daily Mean by Station and Flow Category.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Figure flow category and difference from the daily mean Inflow stations only
+ggplot(filter(RPAs_with_Flow,!is.na(`Inflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+geom_hline(yintercept=0)+
+facet_grid(Station~`Inflow Category`,scales = "free_x")+scale_colour_brewer( type = "qual", palette = "Set2")+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,2))+theme_bw()+
 labs(title="TPO4 Deviation from Daily Mean by Station and Flow Category",y="Deviation from Daily Mean TPO4 (ug/L)",x="Hour")
 
 ggsave("Figures/TPO4 Deviation from Daily Mean by Station and Flow Category.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Figure RPA and flow by Season
-ggplot(RPAs_with_Flow,aes(Flow,TPO4,color=Season))+geom_point(shape=1,alpha=.3)+geom_smooth(se=FALSE)+theme_bw()+
+ggplot(RPAs_with_Flow,aes(Outflow,TPO4,color=Season))+geom_point(shape=1,alpha=.3)+geom_smooth(se=FALSE)+theme_bw()+
 scale_y_continuous(limits=c(0,80),breaks =seq(0,80,10))+facet_wrap(~`Station`,nrow=3)+scale_colour_brewer( type = "qual", palette = "Set2")+
 labs(title="TPO4 vs Flow by Station and Season",y="TPO4 (ug/L)",x="Flow (cfs)")
 
