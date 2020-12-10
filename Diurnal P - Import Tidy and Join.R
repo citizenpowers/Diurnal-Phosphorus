@@ -82,9 +82,11 @@ summarise(Flow=mean(Flow,na.rm = TRUE))
 #RPA data from outflows 
 RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
-#RPA data from inflows
+#RPA data from inflows and midflows
 RPAs_midflow <- read_csv("Data/G384C_TP.csv") %>%
 bind_rows(read_csv("Data/G380C_TP.csv"))   %>%
+bind_rows(read_excel("Data/G378C_Midflow_TP.xlsx")) %>%
+bind_rows(G377C_Inflow_TP <- read_excel("Data/G377C_Inflow_TP.xlsx",col_types = c("text", "date", "numeric","numeric"))) %>%  
 select(SITE_NAME,COLLECT_DATE,TRP,TP)  %>%
 rename(Station="SITE_NAME",Date="COLLECT_DATE",TPO4="TP")
   
@@ -99,7 +101,7 @@ mutate(Year=year(Date)) %>%
 mutate(Hour=hour(Date)) %>%
 mutate(Minute=minute(Date)) %>%  
 mutate(Date=as.Date(Date)) %>%
-mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380")) %>%
+mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377")) %>%
 group_by(Station,Year,Day,Month) %>%
 mutate(RANK=row_number(TPO4))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
