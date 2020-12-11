@@ -108,7 +108,7 @@ mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G37
 group_by(`Flowway`,`Flowpath Region`,Station,Date,Hour) %>%
 summarise(Outflow=mean(Outflow,na.rm = TRUE),`Outflow HLR`=mean(`Outflow HLR`,na.rm=TRUE),Inflow=mean(Inflow,na.rm = TRUE),`Inflow HLR`=mean(`Inflow HLR`,na.rm=TRUE))
 
-write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv")
+write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv",row.names=FALSE)
 
 # Step 2: Import and Tidy RPA data  --------------------------------------
 

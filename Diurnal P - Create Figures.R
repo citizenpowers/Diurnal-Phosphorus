@@ -20,7 +20,7 @@ RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric
 RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
 
 #Import Flow Data
-Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Flow = col_number(),HLR = col_number()))
+Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date = col_date(format = "%Y-%m-%d"),  Inflow = col_number(), `Inflow HLR` = col_number(), Outflow = col_number(), `Outflow HLR` = col_number()))
 
 #RPA and flow DF. 
 RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
@@ -120,55 +120,50 @@ ggsave("Figures/TPO4 vs Flow by Station and Season.jpeg", plot = last_plot(), wi
 # RPA TP Variation figures- Days of continuous Only ------------------------------------------------
 
 
-#create DF of continual flow dates
+#create DF of days where hourly average flow does not deviate by more than 25% from daily mean
 Days_with_continual_flow <- Combined_BK_Flow %>%
-group_by(Station,Date) %>%
-summarize(n=n(),`Min Flow`=min(Flow)) %>%
-drop_na() %>%
-filter(`Min Flow`!=0) %>%
-select(Station,Date)
+group_by(`Flowway`,Date) %>%
+summarize(`Min Outflow`=min(Outflow,na.rm=TRUE),`Mean Outflow`=mean(Outflow,na.rm=TRUE),`Max Outflow`=max(Outflow,na.rm=TRUE),`Min Inflow`=min(Inflow,na.rm=TRUE),`Mean Inflow`=mean(Inflow,na.rm=TRUE),`Max Inflow`=max(Inflow,na.rm=TRUE)) %>% 
+mutate(`Continuous OutFlow`=ifelse(`Min Outflow`>=`Mean Outflow`*.75 &`Max Outflow` <=`Mean Outflow`*1.25,TRUE,FALSE)) %>% #days with all outflow within 25% of mean
+mutate(`Continuous InFlow`=ifelse(`Min Inflow`>=`Mean Inflow`*.75 &`Max Inflow` <=`Mean Inflow`*1.25,TRUE,FALSE)) %>%   #days with all inflow within 25% of mean
+select(`Flowway`,Date,`Continuous OutFlow`,`Continuous InFlow`)
 
 #RPAS with flow data from days of continuous flow only
-RPAs_with_Flow_Complete_Days <-  RPAs_Sorted %>%
-left_join(Combined_BK_Flow ,by=c("Station","Date","Hour")) %>%
-inner_join(Days_with_continual_flow) %>%
-filter(is.finite(Flow)) %>%
-mutate(Season=if_else(between(month(Date),5,11),"Wet Season","Dry Season")) %>%
-mutate(`Flow Category` = as.factor(case_when( 
-    between(Flow,0,1) ~ "0-1 (cfs)",
-    between(Flow,1,100) ~ "1-100 (cfs)",
-    between(Flow,100,250) ~ "100-250 (cfs)",
-    between(Flow,250,500) ~ "250-500 (cfs)",
-    between(Flow,500,1000) ~ "500-1000 (cfs)",
-    Flow>1000 ~ "1000+ (cfs)",
-    Flow<0 ~ "Reverse Flow"))) %>%
-mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)")))
+RPAs_with_Flow_Complete_Days <-  RPAs_with_Flow %>%
+left_join(Days_with_continual_flow)
 
-
-#Hourly TP Variation from the Daily Mean by Station from days of continuous flow
-ggplot(RPAs_with_Flow_Complete_Days,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+#Hourly TP Variation from the Daily Mean by Station and outflow category
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE,!is.na(`Outflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(Station~`Outflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-labs(title="Variation from Daily Mean by Hour from Days with Continuous Flow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+labs(title="Variation from Daily Mean by Hour from Days with Steady outflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
-ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days with continuous flow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Figure RPA and flow Continous Days
-ggplot(RPAs_with_Flow_Complete_Days,aes(Flow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+#Hourly TP Variation from the Daily Mean by Station and Inflow category
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous InFlow`==TRUE,!is.na(`Inflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(Station~`Inflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour from Days with Steady Inflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Figure RPA and OUtflow Continous Days
+ggplot(RPAs_with_Flow_Complete_Days,aes(Outflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,80),breaks =seq(0,80,10))+scale_colour_brewer( type = "qual", palette = "Set2")+
 labs(title="TPO4 vs Flow by Station from Days of Continuous Flow",y="TPO4 (ug/L)",x="Flow (cfs)")
 
 ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Flow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Figure flow category and difference from the daily mean
-ggplot(RPAs_with_Flow_Complete_Days ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+geom_hline(yintercept=0)+
-facet_grid(Station~`Flow Category`,scales = "free_x")+scale_colour_brewer( type = "qual", palette = "Set2")+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,2))+theme_bw()+
-labs(title="TPO4 Deviation from Daily Mean by Station and Flow Category from Days of Continuous Flow",y="Deviation from Daily Mean TPO4 (ug/L)",x="Hour")
+#Figure RPA and OUtflow Continous Days
+ggplot(RPAs_with_Flow_Complete_Days,aes(Inflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,80),breaks =seq(0,80,10))+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="TPO4 vs Flow by Station from Days of Continuous Flow",y="TPO4 (ug/L)",x="Flow (cfs)")
 
-ggsave("Figures/TPO4 Deviation from Daily Mean by Station and Flow Category from days of Continuous Flow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Flow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Figure RPA and flow and month from days with continuous flow
-ggplot(RPAs_with_Flow_Complete_Days,aes(Hour,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(color="black")+theme_bw()+
+#Figure RPA and flow and month from days with continuous outflow
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE,!is.na(`Outflow Category`)),aes(Hour,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(color="black")+theme_bw()+
 facet_grid(Station~Month,scales = "free_x")+scale_y_continuous(limits=c(-10,10),breaks =seq(-10,10,2))+scale_colour_brewer( type = "qual", palette = "Set2")+
 geom_hline(yintercept=0)+labs(title="TPO4 vs Flow by Station from Days with Continuous Flow",y="TPO4 (ug/L)",x="Flow (cfs)")
 
