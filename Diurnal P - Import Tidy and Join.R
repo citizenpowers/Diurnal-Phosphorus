@@ -14,22 +14,31 @@ library(maptools)
 
 #Steps (Only Run if data need update. Skip to create fig script otherwise) 
 # Step 1: Import and Tidy Flow  Data from CSV --------
-#G381
-G381A_C_BK <- select(rename(read_csv("Data/G381A_C_BK.csv",  skip = 2),date = 1,G381A=4),1,4)
-G381B_C_BK <- select(rename(read_csv("Data/G381B_C_BK.csv",  skip = 2),date = 1,G381B=4),1,4)
-G381C_C_BK <- select(rename(read_csv("Data/G381C_C_BK.csv",  skip = 2),date = 1,G381C=4),1,4)
-G381D_C_BK <- select(rename(read_csv("Data/G381D_C_BK.csv",  skip = 2),date = 1,G381D=4),1,4)
-G381E_C_BK <- select(rename(read_csv("Data/G381E_C_BK.csv",  skip = 2),date = 1,G381E=4),1,4)
-G381F_C_BK <- select(rename(read_csv("Data/G381F_C_BK.csv",  skip = 2),date = 1,G381F=4),1,4)
 
-#G379 
-G379A_C_BK <- select(rename(read_csv("Data/G379A_C_BK.csv",  skip = 2),date = 1,G379A=4),1,4)
-G379B_C_BK <- select(rename(read_csv("Data/G379B_C_BK.csv",  skip = 2),date = 1,G379B=4),1,4)
-G379C_C_BK <- select(rename(read_csv("Data/G379C_C_BK.csv",  skip = 2),date = 1,G379C=4),1,4)
-G379D_C_BK <- select(rename(read_csv("Data/G379D_C_BK.csv",  skip = 2),date = 1,G379D=4),1,4)
+#G381 Stations - STA-3/4 western flowway
+G381_C_BK <- select(read_csv("Data/G381_C_BK part 1.csv"),date,STATION,VALUE) %>%
+bind_rows(select(read_csv("Data/G381_C_BK part 2.csv"),date,STATION,VALUE)) %>%
+filter(!is.na(STATION)) %>%
+mutate(date=mdy_hm(date)) %>%  
+distinct(date,STATION,.keep_all = TRUE) %>%     #Required to remove intances where there are multiple values in a single minute
+pivot_wider(names_from = STATION, values_from = VALUE) %>%
+arrange(date) %>%
+fill(`G381A-C-Q`,`G381B-C-Q`,`G381C-C-Q`,`G381D-C-Q`,`G381E-C-Q`,`G381F-C-Q`) %>%
+mutate(G381=rowSums(.[2:7],na.rm=TRUE))          
+
+#G379 Stations - STA-3/4 western flowway
+G379_C_BK <- select(read_csv("Data/G379_C_BK part 1.csv"),date,STATION,VALUE) %>%
+bind_rows(select(read_csv("Data/G379_C_BK part 2.csv"),date,STATION,VALUE)) %>%
+filter(!is.na(STATION)) %>%
+mutate(date=mdy_hm(date)) %>%  
+distinct(date,STATION,.keep_all = TRUE) %>%     #Required to remove intances where there are multiple values in a single minute
+pivot_wider(names_from = STATION, values_from = VALUE) %>%
+arrange(date) %>%
+fill(`G379A-C-Q`,`G379B-C-Q`,`G379C-C-Q`,`G379D-C-Q`,`G379E-C-Q`) %>%
+mutate(G379=rowSums(.[2:6],na.rm=TRUE))          
 
 #G334
-G334_S_BK_1 <- select(rename(read_csv("Data/G334_S_BK.csv",skip = 2),date = 1,G334=4),1,4)
+G334_BK <-mutate( select(rename(read_csv("Data/G334_S_BK.csv",skip = 2),date = 1,G334=4),1,4),date=mdy_hm(date))
 
 #G333 stations  -STA-2 central flowway
 G333_C_BK <- read_csv("Data/G333_C_BK.csv") %>%
@@ -65,47 +74,27 @@ arrange(date) %>%
 fill(`G377A-C-Q`,`G377B-C-Q`,`G377C-C-Q`,`G377D-C-Q`,`G377E-C-Q`) %>%
 mutate(G377=rowSums(.[2:6],na.rm=TRUE))          
 
-
-#G381 Combine individual flowway stations
-G381_BK <- mutate(G381A_C_BK,date=dmy_hms(date)) %>%  #sum flow from all gates in STA34 cell 3B
-full_join(mutate(G381B_C_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G381C_C_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G381D_C_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G381E_C_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G381F_C_BK,date=mdy_hm(date)),by="date") %>%
-arrange(date) %>%
-fill(G381A,G381B,G381C,G381D,G381E,G381F) %>%
-mutate(G381=rowSums(.[2:7],na.rm=TRUE))
-
-G379_BK <- mutate(G379A_C_BK,date=dmy_hms(date))  %>%   #sum flow from all gates in STA34 cell 2B
-full_join(mutate(G379B_C_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G379C_C_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G379D_C_BK,date=mdy_hm(date)),by="date") %>%
-arrange(date) %>%
-fill(G379A,G379B,G379C,G379D) %>%
-mutate(G379=rowSums(.[2:5],na.rm=TRUE))
-
-G334_BK <-mutate(G334_S_BK_1,date=mdy_hm(date))
-
 #Combined Outflow over entire flowway
-Combined_BK_Flow <- G381_BK %>%  #combine data from G381, G334, G379D
-bind_rows(G379_BK) %>%
+Combined_BK_Flow <- G381_C_BK %>%  #combine data from G381, G334, G379D
+bind_rows(G379_C_BK) %>%
 bind_rows(G334_BK)  %>%
 bind_rows(G333_C_BK) %>% 
 bind_rows(G380_C_BK) %>%
 bind_rows(G377_C_BK) %>%
 select(date,G381,G379,G334,G333,G380,G377) %>%
-fill(G381,G379,G334,G333,G380,G377) %>%  
+arrange(date)  %>%
+fill(G381,G379,G334,G333,G380,G377) %>% 
+distinct() %>%
 gather("Station","Flow",G381,G379,G334,G333,G380,G377) %>%
-mutate(`Outflow` = case_when(`Station` %in% c("G381","G379","G334")~Flow)) %>% 
-mutate(`Outflow HLR` = case_when(`Station`=="G381" ~ Flow/2087,`Station`=="G379" ~ Flow/2375,`Station`=="G334" ~ Flow/2400)) %>%
-mutate(`Inflow` = case_when(`Station` %in% c("G333","G380","G377")~Flow)) %>% 
-mutate(`Inflow HLR` = case_when(`Station`=="G333" ~ Flow/2400,`Station`=="G380" ~ Flow/2087,`Station`=="G377" ~ Flow/2375)) %>%
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G377"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G333"~"STA-2 Central")) %>%        #Add flowway info to RPA data
+mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G377"~"Inflow",`Station`=="G381"~"Outflow",`Station`=="G333"~"Inflow",`Station`=="G380"~"Inflow"))  %>%     #Add flowpath position
+mutate(`Outflow` = case_when(`Flowway` == "STA-2 Central" & `Flowpath Region`=="Outflow" ~Flow,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Outflow"~Flow,`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Outflow"~Flow)) %>% 
+mutate(`Outflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Outflow"~Flow/2087,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Outflow"~Flow/2375,`Flowway` == "STA-2 Central" & `Flowpath Region`=="Outflow" ~Flow/2400)) %>%
+mutate(`Inflow` = case_when(`Flowway` == "STA-2 Central"  & `Flowpath Region`=="Inflow" ~Flow,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Inflow"~Flow,`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Inflow"~Flow))  %>%
+mutate(`Inflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Inflow"~Flow/2087,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Inflow"~Flow/2375,`Flowway` == "STA-2 Central" & `Flowpath Region`=="Inflow" ~Flow/2400)) %>%
 mutate(Date=as.Date(date)) %>%
 mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
-mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G377"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G333"~"STA-2 Central")) %>%        #Add flowway info to RPA data
-mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G377"~"Inflow",`Station`=="G381"~"Outflow",`Station`=="G333"~"Inflow",`Station`=="G380"~"Inflow")) %>%        #Add flowpath position
-group_by(`Flowway`,`Flowpath Region`,Station,Date,Hour) %>%
+group_by(`Flowway`,Date,Hour) %>%
 summarise(Outflow=mean(Outflow,na.rm = TRUE),`Outflow HLR`=mean(`Outflow HLR`,na.rm=TRUE),Inflow=mean(Inflow,na.rm = TRUE),`Inflow HLR`=mean(`Inflow HLR`,na.rm=TRUE))
 
 write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv",row.names=FALSE)
@@ -249,7 +238,7 @@ Inflow_TP_Data <-G378B_tidy %>%
 
 # Step 7: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
-left_join(Combined_BK_Flow ,by=c("Station","Date","Hour","Flowway","Flowpath Region")) %>%
+left_join(Combined_BK_Flow ,by=c("Date","Hour","Flowway")) %>%
 filter(is.finite(Outflow) || is.finite(Inflow)) %>%     #need inflow data
 mutate(Outflow=as.numeric(Outflow)) %>%
 mutate(Season=if_else(between(month(Date),5,11),"Wet Season","Dry Season")) %>%
