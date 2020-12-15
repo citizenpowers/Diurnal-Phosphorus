@@ -117,6 +117,17 @@ labs(title="TPO4 vs Flow by Station and Season",y="TPO4 (ug/L)",x="Flow (cfs)")
 ggsave("Figures/TPO4 vs Flow by Station and Season.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 
+
+# TRP diel trend? ---------------------------------------------------------
+#Hourly TP Variation from the Daily Mean by Station
+ggplot(RPAs_Sorted,aes(Time,`TRP Diff from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TRP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+
 # RPA TP Variation figures- Days of continuous Only ------------------------------------------------
 
 
@@ -270,43 +281,68 @@ ggsave("Figures/Max Daily Wind Effect on Diel P.jpeg", plot = last_plot(), width
 
 # Stage Analysis ----------------------------------------------------------
 #Stage over time
-ggplot(RPAs_with_Flow_Stage_Weather,aes(Date,Stage,color=Station))+geom_point(size=.5)+theme_bw()
+ggplot(gather(RPAs_with_Flow_Stage_Weather,"Stage Position","Stage",`Inflow Stage`,`Outflow Stage`),aes(Date,Stage,fill=`Stage Position`))+geom_point(size=1.5,shape=21,alpha=.5)+theme_bw()+facet_wrap(~Flowway,ncol=1)+
+scale_fill_brewer( type = "qual", palette = "Set2")
 
 #Stage histogram
-ggplot(RPAs_with_Flow_Stage_Weather,aes(Stage,fill=Station))+geom_histogram(alpha=.5)+theme_bw()+facet_wrap(~Station)
+ggplot(gather(RPAs_with_Flow_Stage_Weather,"Stage Position","Stage",`Inflow Stage`,`Outflow Stage`),aes(Stage,fill=Station))+geom_histogram(alpha=.5)+theme_bw()+facet_wrap(~Station)
 
 #Stage effect on TP Variation from the Daily Mean by Station 
-ggplot(RPAs_with_Flow_Stage_Weather,aes(`Stage`,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Outflow Stage`,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
 scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
 geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-labs(title="Stage Effect on Variation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Stage (ft)")
+labs(title="Outflow Stage Effect on Variation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Stage (ft)")
 
-ggsave("Figures/Stage Effect on Variation from Daily Mean.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Outflow Stage Effect on Variation from Daily Mean.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Effect of max daily Stage on diel P 
-ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Stage`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_grid(`Max Daily Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+#Effect of max daily Outflow Stage on diel P 
+ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Outflow Stage`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(`Max Daily Outflow Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-labs(title="Max Daily Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+labs(title="Max Daily Outflow Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
-ggsave("Figures/Max Daily Stage Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Max Daily Outflow Stage Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Deviation from daily mean stage vs TP deviation from 24 hour mean 
-ggplot(RPAs_with_Flow_Stage_Weather,aes(`Stage_Diff_24_hour_mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
-scale_y_continuous(limits = c(-25,25),breaks = seq(-25,25,5))+geom_smooth(color="black")+
-facet_wrap(~Station)+geom_point(aes(mean(`Stage_Diff_24_hour_mean`,na.rm=TRUE),mean(Diff_24_hour_mean,na.rm=TRUE)),color="black",size=2,shape=3)+
-geom_hline(aes(yintercept = 0))+labs(title="Change in Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Stage Deviation from 24 hour mean (ft)")
+#Effect of max daily Inflow Stage on diel P 
+ggplot(filter(RPAs_with_Flow_Stage_Weather,is.finite(`Max Daily Inflow Stage`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(`Max Daily Inflow Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Max Daily Inflow Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
-ggsave("Figures/Change in Stage Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Max Daily Inflow Stage Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-#Deviation from daily mean stage vs TP deviation from 24 hour mean. Filter only days of stage change greater than 1 inch
-formula <- y ~ x
-ggplot(filter(RPAs_with_Flow_Stage_Weather,abs(`Stage_Diff_24_hour_mean`)>.083),aes(`Stage_Diff_24_hour_mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
+
+#Deviation from daily mean Outflow stage vs TP deviation from 24 hour mean 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Outflow Stage Diff 24 hour mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
+scale_y_continuous(limits = c(-25,25),breaks = seq(-25,25,5))+geom_smooth(color="black",method="lm")+
+facet_wrap(~Station)+geom_point(aes(mean(`Outflow Stage Diff 24 hour mean`,na.rm=TRUE),mean(`Diff_24_hour_mean`,na.rm=TRUE)),color="black",size=2,shape=3)+
+geom_hline(aes(yintercept = 0))+labs(title="Change in Outflow Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Outflow Stage Deviation from 24 hour mean (ft)")
+
+ggsave("Figures/Change in Outflow Stage Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Deviation from daily mean Outflow stage vs TP deviation from 24 hour mean. Filter only days of stage change greater than 1 inch
+ggplot(filter(RPAs_with_Flow_Stage_Weather,abs(`Outflow Stage Diff 24 hour mean`)>.083),aes(`Outflow Stage Diff 24 hour mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
 scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+geom_smooth(method="lm",color="black")+
-facet_wrap(~Station)+geom_hline(aes(yintercept = 0))+labs(title="Change in Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Stage Deviation from 24 hour mean (ft)")+
-stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right", label.y.npc = 0.15,formula = formula, parse = TRUE, size = 3)
+facet_wrap(~Station)+geom_hline(aes(yintercept = 0))+labs(title="Change in Outflow Stage Effect on P Deviation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Outflow Stage Deviation from 24 hour mean (ft)")+
+stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right", label.y.npc = 0.15,formula = y~x, parse = TRUE, size = 3)
 
-ggsave("Figures/Change in Stage Effect on Diel P from days of over 1 inch stage change.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Change in Outflow Stage Effect on Diel P from days of over 1 inch Outflow stage change.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Deviation from daily mean Inflow stage vs TP deviation from 24 hour mean 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Inflow Stage Diff 24 hour mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
+scale_y_continuous(limits = c(-25,25),breaks = seq(-25,25,5))+geom_smooth(color="black",method="lm")+
+facet_wrap(~Station)+geom_point(aes(mean(`Inflow Stage Diff 24 hour mean`,na.rm=TRUE),mean(`Diff_24_hour_mean`,na.rm=TRUE)),color="black",size=2,shape=3)+
+geom_hline(aes(yintercept = 0))+labs(title="Change in Inflow Stage Effect on P Deviation from Daily Mean",y="TPO4 Deviation from daily mean (ug/L)",x="Inflow Stage Deviation from 24 hour mean (ft)")
+
+ggsave("Figures/Change in Inflow Stage Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Deviation from daily mean Inflow stage vs TP deviation from 24 hour mean. Filter only days of stage change greater than 1 inch
+ggplot(filter(RPAs_with_Flow_Stage_Weather,abs(`Inflow Stage Diff 24 hour mean`)>.083),aes(`Inflow Stage Diff 24 hour mean`,Diff_24_hour_mean,color=Station))+geom_point(size=.5,alpha=.5)+theme_bw()+
+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+geom_smooth(method="lm",color="black")+
+facet_wrap(~Station)+geom_hline(aes(yintercept = 0))+labs(title="Change in Inflow Stage Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Inflow Stage Deviation from 24 hour mean (ft)")+
+stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right", label.y.npc = 0.15,formula =y~x, parse = TRUE, size = 3)
+
+ggsave("Figures/Change in Inflow Stage Effect on Diel P from days of over 1 inch Inflow stage change.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 
 

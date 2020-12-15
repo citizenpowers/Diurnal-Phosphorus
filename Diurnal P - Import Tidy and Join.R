@@ -38,7 +38,13 @@ fill(`G379A-C-Q`,`G379B-C-Q`,`G379C-C-Q`,`G379D-C-Q`,`G379E-C-Q`) %>%
 mutate(G379=rowSums(.[2:6],na.rm=TRUE))          
 
 #G334
-G334_BK <-mutate( select(rename(read_csv("Data/G334_S_BK.csv",skip = 2),date = 1,G334=4),1,4),date=mdy_hm(date))
+G334_S_BK <- select(read_csv("Data/G334_S_BK.csv"),date,STATION,VALUE) %>%
+filter(!is.na(STATION)) %>%
+mutate(date=mdy_hm(date)) %>%  
+distinct(date,STATION,.keep_all = TRUE) %>%     #Required to remove intances where there are multiple values in a single minute
+arrange(date) %>%
+mutate(G334=VALUE) %>%
+select(-STATION,-VALUE)
 
 #G333 stations  -STA-2 central flowway
 G333_C_BK <- read_csv("Data/G333_C_BK.csv") %>%
@@ -75,12 +81,13 @@ fill(`G377A-C-Q`,`G377B-C-Q`,`G377C-C-Q`,`G377D-C-Q`,`G377E-C-Q`) %>%
 mutate(G377=rowSums(.[2:6],na.rm=TRUE))          
 
 #Combined Outflow over entire flowway
-Combined_BK_Flow <- G381_C_BK %>%  #combine data from G381, G334, G379D
-bind_rows(G379_C_BK) %>%
-bind_rows(G334_BK)  %>%
-bind_rows(G333_C_BK) %>% 
-bind_rows(G380_C_BK) %>%
-bind_rows(G377_C_BK) %>%
+Combined_BK_Flow <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,10,01,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+left_join(G381_C_BK,by="date") %>%  #combine data from G381, G334, G379D
+left_join(G379_C_BK,by="date") %>%
+left_join(G334_S_BK,by="date")  %>%
+left_join(G333_C_BK,by="date") %>% 
+left_join(G380_C_BK,by="date") %>%
+left_join(G377_C_BK,by="date") %>%
 select(date,G381,G379,G334,G333,G380,G377) %>%
 arrange(date)  %>%
 fill(G381,G379,G334,G333,G380,G377) %>% 
@@ -116,7 +123,7 @@ rename(Station="SITE_NAME",Date="COLLECT_DATE",TPO4="TP")
  
 RPAs_Sorted <- RPAs %>%
 bind_rows(RPAs_midflow)  %>%
-filter(!is.na(TPO4),TPO4>=0) %>%
+filter(!is.na(TPO4),TPO4>=0) %>%            #screening step. Only NAs and zeros removed. Not right hand censored at all. Should right sided outliers be removed? 
 mutate(Month=month(Date,label=TRUE)) %>%
 mutate(Day=day(Date)) %>%
 mutate(Time=hour(Date)+ minute(Date)/60) %>%
@@ -128,38 +135,65 @@ mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G3
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow")) %>%        #Add flowpath position
 group_by(Station,Year,Day,Month) %>%
-mutate(RANK=row_number(TPO4))  %>%
+mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
 mutate(Scaled_Value=TPO4/max(TPO4)) %>%
-mutate(`24_hour_mean`=mean(TPO4)) %>%
-mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`) %>%
+mutate(`24_hour_mean`=mean(TPO4),`TRP Daily Mean`=mean(TRP,na.rm = TRUE)) %>%
+mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,`TRP Diff from daily mean`=TRP-`TRP Daily Mean`) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
 
-# Step 3: Import and Tidy Stage from G334_H,G379B_H, G381B_H---------------------------
+# Step 3: Import and Tidy Stage from flowway inflows and ouflows---------------------------
 
-G334_H_BK <- select(rename(read_csv("Data/G334_H_BK.csv",  skip = 2),date = 1,G334=4),1,4)
+STA2C3_Stage <- select(read_csv("Data/STA2C3_Stage.csv"),date,STATION,VALUE) %>%
+filter(!is.na(STATION)) %>%
+mutate(date=mdy_hm(date)) %>%  
+distinct(date,STATION,.keep_all = TRUE) %>%     #Required to remove intances where there are multiple values in a single minute
+pivot_wider(names_from = STATION, values_from = VALUE) %>%
+arrange(date) %>%  
+fill(`G333C-T`,`G334-H`) 
 
-G379B_H_BK <- select(rename(read_csv("Data/G379B_H_BK.csv",  skip = 2),date = 1,G379=4),1,4)
+STA34_central_flowway_Stage <- select(read_csv("Data/STA34 central flowway Stage.csv"),date,STATION,VALUE) %>%
+filter(!is.na(STATION)) %>%
+mutate(date=mdy_hm(date)) %>%  
+distinct(date,STATION,.keep_all = TRUE) %>%     #Required to remove intances where there are multiple values in a single minute
+pivot_wider(names_from = STATION, values_from = VALUE) %>%
+arrange(date) %>%  
+fill(`G379D-H`,`G377D-T`) 
 
-G381B_H_BK <- select(rename(read_csv("Data/G381B_H_BK.csv",  skip = 2),date = 1,G381=4),1,4)
+STA34_western_flowway_Stage <- select(read_csv("Data/STA34 western flowway Stage.csv"),date,STATION,VALUE) %>%
+filter(!is.na(STATION)) %>%
+mutate(date=mdy_hm(date)) %>%  
+distinct(date,STATION,.keep_all = TRUE) %>%     #Required to remove intances where there are multiple values in a single minute
+pivot_wider(names_from = STATION, values_from = VALUE) %>%
+arrange(date) %>%  
+fill(`G381B-H`,`G380B-T`) 
 
-Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
-full_join(mutate(G334_H_BK,date=dmy_hms(date)),by="date") %>%  #sum flow from all gates in STA34 cell 3B
-full_join(mutate(G379B_H_BK,date=dmy_hms(date)),by="date") %>%
-full_join(mutate(G381B_H_BK,date=mdy_hm(date)),by="date") %>%  
+Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,10,01,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+full_join(STA2C3_Stage,by="date") %>%  
+full_join(STA34_central_flowway_Stage ,by="date") %>%
+full_join(STA34_western_flowway_Stage ,by="date") %>%  
 arrange(date) %>%
-fill(G381,G379,G334) %>% 
-pivot_longer(2:4,names_to="Station",values_to="Stage") %>%
-mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
-group_by(Date) %>%
-mutate(`Max Daily Stage` = case_when(max(`Stage`,na.rm=TRUE)<10.5~ " < 10.5 Max Daily Stage ft",
-                                     between(max(`Stage`,na.rm=TRUE),10.5,11)~ "10.5-11 Max Daily Stage ft",
-                                     between(max(`Stage`,na.rm=TRUE),11,12)~ "11-12 Max Daily Stage ft",
-                                     max(`Stage`,na.rm=TRUE)>12~ "12+ Max Daily Stage ft")) %>%
-mutate(`Max Daily Stage` = factor(`Max Daily Stage`, levels = c(" < 10.5 Max Daily Stage ft", "10.5-11 Max Daily Stage ft", "11-12 Max Daily Stage ft","12+ Max Daily Stage ft"))) %>% 
-select(-date)
+fill(`G333C-T`,`G334-H`,`G379D-H`,`G377D-T`,`G381B-H`,`G380B-T`) %>%
+mutate(Date=as.Date(date)) %>%
+mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
+group_by(Date,Hour) %>%  
+summarise(`G333C-T`=mean(`G333C-T`,na.rm = TRUE),`G334-H`=mean(`G334-H`,na.rm=TRUE),`G379D-H`=mean(`G379D-H`,na.rm = TRUE),`G377D-T`=mean(`G377D-T`,na.rm=TRUE),`G381B-H`=mean(`G381B-H`,na.rm = TRUE),`G380B-T`=mean(`G380B-T`,na.rm=TRUE)) %>% 
+gather("Station","Stage",`G333C-T`,`G334-H`,`G379D-H`,`G377D-T`,`G381B-H`,`G380B-T`) %>% 
+mutate(`Flowway` = case_when(`Station`=="G333C-T"~"STA-2 Central",`Station`=="G379D-H"~"STA-3/4 Central",`Station`=="G377D-T"~"STA-3/4 Central",`Station`=="G381B-H"~"STA-3/4 Western",`Station`=="G380B-T"~"STA-3/4 Western",`Station`=="G334-H"~"STA-2 Central")) %>%        #Add flowway info to RPA data
+mutate(`Flowpath Region` = case_when(`Station` %in% c("G333C-T","G377D-T","G380B-T")~"Inflow", Station %in% c("G334-H","G381B-H","G379D-H")~"Outflow"))  %>%     #Add flowpath position
+mutate(`Outflow Stage` = case_when(`Flowway` == "STA-2 Central" & `Flowpath Region`=="Outflow" ~Stage,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Outflow"~Stage,`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Outflow"~Stage)) %>% 
+mutate(`Inflow Stage` = case_when(`Flowway` == "STA-2 Central"  & `Flowpath Region`=="Inflow" ~Stage,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Inflow"~Stage,`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Inflow"~Stage))  %>%
+group_by(`Flowway`,Date,Hour) %>%
+summarise(`Outflow Stage`=mean(`Outflow Stage`,na.rm = TRUE),`Inflow Stage`=mean(`Inflow Stage`,na.rm=TRUE)) %>%
+group_by(`Flowway`,Date) %>%
+mutate(`Max Daily Outflow Stage` = case_when(max(`Outflow Stage`,na.rm=TRUE)<10.5~ " < 10.5 Max Daily Stage ft",between(max(`Outflow Stage`,na.rm=TRUE),10.5,11)~ "10.5-11 Max Daily Stage ft",between(max(`Outflow Stage`,na.rm=TRUE),11,12)~ "11-12 Max Daily Stage ft",between(max(`Outflow Stage`,na.rm=TRUE),12,13)~ "12-13 Max Daily Stage ft",max(`Outflow Stage`,na.rm=TRUE)>13~ "13+ Max Daily Stage ft")) %>%
+mutate(`Max Daily Outflow Stage` = factor(`Max Daily Outflow Stage`, levels = c(" < 10.5 Max Daily Stage ft", "10.5-11 Max Daily Stage ft", "11-12 Max Daily Stage ft","12-13 Max Daily Stage ft","13+ Max Daily Stage ft"))) %>%
+mutate(`Max Daily Inflow Stage` = case_when(max(`Inflow Stage`,na.rm=TRUE)<10.5~ " < 10.5 Max Daily Stage ft",between(max(`Inflow Stage`,na.rm=TRUE),10.5,11)~ "10.5-11 Max Daily Stage ft",between(max(`Inflow Stage`,na.rm=TRUE),11,12)~ "11-12 Max Daily Stage ft",between(max(`Inflow Stage`,na.rm=TRUE),12,13)~ "12-13 Max Daily Stage ft",max(`Inflow Stage`,na.rm=TRUE)>13~ "13+ Max Daily Stage ft")) %>%
+mutate(`Max Daily Inflow Stage` = factor(`Max Daily Inflow Stage`, levels = c(" < 10.5 Max Daily Stage ft", "10.5-11 Max Daily Stage ft", "11-12 Max Daily Stage ft","12-13 Max Daily Stage ft","13+ Max Daily Stage ft")))
+
+write.csv(Combined_Stage, "Data/Stage All Flowways.csv",row.names=FALSE)
   
 # Step 4: Import and Tidy Sonde Data ----------------------------------------------
 SONDE_DATA <- read_csv("Data/SONDE_DATA.csv") 
@@ -252,10 +286,10 @@ write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 # Step 8: Join with Stage Data and save DF ----------------------------------------------------
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
-left_join(Combined_Stage ,by=c("Station","Date","Hour","Minute")) %>%
-group_by(Station,Date) %>%
-mutate(`Stage_24_hour_mean`=mean(Stage)) %>%  
-mutate(Stage_Diff_24_hour_mean=Stage-`Stage_24_hour_mean`) 
+left_join(Combined_Stage ,by=c("Flowway","Date","Hour")) %>%
+group_by(Flowway,Date) %>%
+mutate(`Outflow_Stage_24_hour_mean`=mean(`Outflow Stage`),`Inflow_Stage_24_hour_mean`=mean(`Inflow Stage`)) %>%       #calculate daily mean stage for inflow and outflow
+mutate(`Outflow Stage Diff 24 hour mean`=`Outflow Stage`-`Outflow_Stage_24_hour_mean`,`Inflow Stage Diff 24 hour mean`=`Inflow Stage`-`Inflow_Stage_24_hour_mean`)  #calculate hourly deviation from daily mean for inflow and outflow
 
 
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv",row.names=FALSE)
@@ -276,7 +310,7 @@ left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))
 
 write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather Sonde.csv",row.names=FALSE)
 
-# Step 11: Join with Inflow Data ------------------------------------------
+# Step 11: Join with Inflow compliance TP Data ------------------------------------------
 RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- RPAs_with_Flow_Stage_Weather_Sonde %>%
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3",`Station`=="G380"~"STA-3/4C3",`Station`=="G384"~"STA-3/4C3")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow")) %>%        #Add flowpath position
