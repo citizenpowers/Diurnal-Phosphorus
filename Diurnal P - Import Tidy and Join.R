@@ -119,11 +119,18 @@ bind_rows(read_excel("Data/G377C_Inflow_TP.xlsx",col_types = c("text", "date", "
 bind_rows(select(mutate(read_csv("Data/G333C_Inflow_TP.csv",col_types = cols(BATTERY_VOLTAGE = col_datetime(format = "%m/%d/%Y %H:%M"))),COLLECT_DATE=mdy_hm(COLLECT_DATE)),SITE_NAME,COLLECT_DATE,TRP,TP)) %>%
 select(SITE_NAME,COLLECT_DATE,TRP,TP)  %>%
 rename(Station="SITE_NAME",Date="COLLECT_DATE",TPO4="TP")
-  
+
+#Detect Outliers limits per station
+Outliers <- RPAs %>%
+bind_rows(RPAs_midflow) %>%
+mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
+group_by(Station) %>%
+summarise(n=n(),mean=mean(TPO4,na.rm=TRUE),median=median(TPO4,na.rm=TRUE),`Q1`=quantile(TPO4,.25,na.rm = TRUE),`Q3`=quantile(TPO4,.75,na.rm = TRUE),IQR=Q3-Q1,`Mild Outliers`=Q3+1.5*IQR,`Extreme Outliers`=Q3+3*IQR,
+`TRP mean`=mean(TRP,na.rm=TRUE),`TRP median`=median(TRP,na.rm=TRUE),`TRP Q1`=quantile(TRP,.25,na.rm = TRUE),`TRP Q3`=quantile(TRP,.75,na.rm = TRUE),`TRP IQR`=`TRP Q3`-`TRP Q1`,`TRP Mild Outliers`=`TRP Q3`+1.5*`TRP IQR`,`TRP Extreme Outliers`=`TRP Q3`+3*`TRP IQR`)
+
  
-RPAs_Sorted <- RPAs %>%
+RPAs_outliers_removed <- RPAs %>%
 bind_rows(RPAs_midflow)  %>%
-filter(!is.na(TPO4),TPO4>=0) %>%            #screening step. Only NAs and zeros removed. Not right hand censored at all. Should right sided outliers be removed? 
 mutate(Month=month(Date,label=TRUE)) %>%
 mutate(Day=day(Date)) %>%
 mutate(Time=hour(Date)+ minute(Date)/60) %>%
@@ -133,7 +140,20 @@ mutate(Minute=minute(Date)) %>%
 mutate(Date=as.Date(Date)) %>%
 mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
-mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow")) %>%        #Add flowpath position
+mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow"))   %>%     #Add flowpath position
+mutate(TPO4=if_else(TPO4<1,1,TPO4),TRP=if_else(TRP<1,1,TRP)) %>%  #TPO4 and TRP values less than MDL replaced with the MDL
+mutate(TPO4=case_when(Station=="G333" & TPO4 >193.25 ~ 193.25,
+                      Station=="G334" & TPO4 >35.28 ~ 35.28,
+                      Station=="G377" & TPO4 >87.50 ~ 87.50,
+                      Station=="G378" & TPO4 >24.00 ~ 24.00,
+                      Station=="G379" & TPO4 >53.50 ~ 53.50,
+                      Station=="G380" & TPO4 >120.50 ~ 120.50,
+                      Station=="G381" & TPO4 >33.50 ~ 33.50,
+                      Station=="G384" & TPO4 >39.00 ~ 39.00,
+                      TRUE~as.numeric(as.character(TPO4))))     #Replace outliers with quantile(.75)+1.5*IQR
+
+  
+RPAs_Sorted <- RPAs_outliers_removed %>%
 group_by(Station,Year,Day,Month) %>%
 mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
@@ -141,6 +161,7 @@ mutate(Scaled_Value=TPO4/max(TPO4)) %>%
 mutate(`24_hour_mean`=mean(TPO4),`TRP Daily Mean`=mean(TRP,na.rm = TRUE)) %>%
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,`TRP Diff from daily mean`=TRP-`TRP Daily Mean`) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
+
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
 
