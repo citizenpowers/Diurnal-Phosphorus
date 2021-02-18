@@ -25,8 +25,6 @@ RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv")
 All_flow_RPA1 <- read_csv("Data/Hours Since Flow.csv") 
 
 
-
-
 # TPO4 vs FLOW at inflow sites --------------------------------------------
 
 RPAs_with_Flow_outflows_censored <- RPAs_with_Flow %>%
@@ -38,7 +36,6 @@ labs(title="Inflow effect on Phosphorus",y="TPO4 (ug/L)",x="Flow (cfs)")
 
 
 # First flush theory ------------------------------------------------------
-
 
 
 All_flow_RPA <- RPAs_Sorted  %>%           #create DF with flow for everyhour for the POR

@@ -126,9 +126,11 @@ bind_rows(RPAs_midflow) %>%
 mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
 group_by(Station) %>%
 summarise(n=n(),mean=mean(TPO4,na.rm=TRUE),median=median(TPO4,na.rm=TRUE),`Q1`=quantile(TPO4,.25,na.rm = TRUE),`Q3`=quantile(TPO4,.75,na.rm = TRUE),IQR=Q3-Q1,`Mild Outliers`=Q3+1.5*IQR,`Extreme Outliers`=Q3+3*IQR,
-`TRP mean`=mean(TRP,na.rm=TRUE),`TRP median`=median(TRP,na.rm=TRUE),`TRP Q1`=quantile(TRP,.25,na.rm = TRUE),`TRP Q3`=quantile(TRP,.75,na.rm = TRUE),`TRP IQR`=`TRP Q3`-`TRP Q1`,`TRP Mild Outliers`=`TRP Q3`+1.5*`TRP IQR`,`TRP Extreme Outliers`=`TRP Q3`+3*`TRP IQR`)
+`TRP mean`=mean(TRP,na.rm=TRUE),`TRP median`=median(TRP,na.rm=TRUE),`TRP Q1`=quantile(TRP,.25,na.rm = TRUE),`TRP Q3`=quantile(TRP,.75,na.rm = TRUE),`TRP IQR`=`TRP Q3`-`TRP Q1`,`TRP Mild Outliers`=`TRP Q3`+1.5*`TRP IQR`,`TRP Extreme Outliers`=`TRP Q3`+3*`TRP IQR`,
+`TPO4 Observations`=sum(is.finite(TPO4)),`NAs Observed`=sum(is.na(TPO4)),`Below detection`=sum(if_else(TPO4<1,1,0),na.rm=TRUE),`above outlier`=sum(if_else(TPO4>`Mild Outliers`,1,0),na.rm=TRUE),
+`above extreme outlier`=sum(if_else(TPO4>`Extreme Outliers`,1,0),na.rm=TRUE))
 
- 
+#remove outliers and  
 RPAs_outliers_removed <- RPAs %>%
 bind_rows(RPAs_midflow)  %>%
 mutate(Month=month(Date,label=TRUE)) %>%
@@ -158,7 +160,7 @@ group_by(Station,Year,Day,Month) %>%
 mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
 mutate(Scaled_Value=TPO4/max(TPO4)) %>%
-mutate(`24_hour_mean`=mean(TPO4),`TRP Daily Mean`=mean(TRP,na.rm = TRUE)) %>%
+mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`TRP Daily Mean`=mean(TRP,na.rm = TRUE)) %>%
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,`TRP Diff from daily mean`=TRP-`TRP Daily Mean`) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
 

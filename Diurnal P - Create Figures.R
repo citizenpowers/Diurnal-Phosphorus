@@ -10,6 +10,14 @@ library(lubridate)
 library(tidyr)
 library(maptools)
 library(ggpmisc)
+citation("dplyr")
+citation("tidyr")
+citation("scales")
+citation("ggpmisc")
+citation("ggplot2")
+citation("lubridate")
+citation("maptools")
+citation("ggpmisc")
 
 
 # Import data for RPA analysis -------------------------------------------------------------
@@ -57,6 +65,12 @@ group_by(Hour,Station,date) %>%
 summarise(`Number of Observations`=sum(!is.na(TPO4)))
 
 ggplot(RPA_summary,aes(date,Hour,fill=-`Number of Observations`))+geom_raster()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
+
+#missing data. Ist there a pattern in the missing data? 
+ggplot(RPAs_Sorted,aes(Date,is.na(TPO4)))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
+
+ggplot(RPAs_Sorted,aes(TPO4,fill=is.na(TPO4)))+geom_histogram()+facet_wrap(~Station,ncol = 1)+theme_bw()
+
 
 
 
