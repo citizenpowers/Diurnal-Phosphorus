@@ -22,7 +22,7 @@ citation("ggpmisc")
 
 # Import data for RPA analysis -------------------------------------------------------------
 #RPA raw data
-RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+RPAs_Raw <-  read_csv("Data/RPAs_Raw.csv") 
 
 #RPA tidy data
 RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
@@ -51,7 +51,7 @@ RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- read_csv("Data/RPA and Flow Stag
 #STA34 C3B 2087 acres
 #STA34 C2B 2375 acres
 
-# Date Range of RPA Data ------------------------------------------------------
+# Date Range of RPA Data, Data Distribution, Outliers, and Missing Data ------------------------------------------------------
 ggplot(pivot_longer(RPAs_Sorted,3:4,names_to="Analyte",values_to="Value") ,aes(Date,Value,color=Analyte))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
 
 ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
@@ -61,17 +61,23 @@ ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Statio
 
 RPA_summary <-RPAs_Sorted %>%
 mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
-group_by(Hour,Station,date) %>%
-summarise(`Number of Observations`=sum(!is.na(TPO4)))
+group_by(Hour,Station) %>%
+summarise(`Number of Observations`=sum(!is.na(TPO4)),`Total missing data`=sum(is.na(TPO4)),n=n()) %>% 
+mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) %>%
+gather("Data Type","Value",3:4)
 
-ggplot(RPA_summary,aes(date,Hour,fill=-`Number of Observations`))+geom_raster()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
+#missing data. Ist there a pattern in the missing data by time of day? 
+ggplot(RPA_summary,aes(Hour,Value,fill=`Data Type`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
 
-#missing data. Ist there a pattern in the missing data? 
-ggplot(RPAs_Sorted,aes(Date,is.na(TPO4)))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
+# missing data by percent 
+ggplot(filter(RPA_summary,n>10),aes(Hour,`% missing data`))+geom_col()+facet_wrap(~Station,ncol = 2,scales="free")+scale_y_continuous(label=percent_format())+ theme_bw()
 
-ggplot(RPAs_Sorted,aes(TPO4,fill=is.na(TPO4)))+geom_histogram()+facet_wrap(~Station,ncol = 1)+theme_bw()
+#Data distributions  data are right skewed
+ggplot(RPAs_Raw,aes(TPO4))+geom_histogram()+facet_wrap(~Station,scales="free")+theme_bw()
 
+ggplot(RPAs_Raw,aes(sample=TPO4))+geom_qq()+facet_wrap(~Station,scales="free")+stat_qq_line()+theme_bw()
 
+ggplot(RPAs_Raw,aes(TPO4))+geom_boxplot()+facet_wrap(~Station,scales="free")+theme_bw()
 
 
 # RPA TP Variation figures ------------------------------------------------------------
