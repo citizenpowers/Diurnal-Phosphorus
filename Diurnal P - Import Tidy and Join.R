@@ -109,7 +109,7 @@ write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv",row.names=FALSE)
 # Step 2: Import and Tidy RPA data  --------------------------------------
 
 #RPA data from outflows 
-RPAs <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
+RPAs_outflows <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
 #RPA data from inflows and midflows
 RPAs_midflow <- read_csv("Data/G384C_TP.csv") %>%
@@ -121,15 +121,14 @@ select(SITE_NAME,COLLECT_DATE,TRP,TP)  %>%
 rename(Station="SITE_NAME",Date="COLLECT_DATE",TPO4="TP")
 
 #All RPA data untidied and uncensored except negative values removed and substituted with MDL
-RPAs_Raw<- RPAs %>%
+RPAs_Raw<- RPAs_outflows %>%
 bind_rows(RPAs_midflow) %>%
 mutate(TPO4=if_else(TPO4<1,1,TPO4),TRP=if_else(TRP<1,1,TRP))   #TPO4 and TRP values less than MDL replaced with the MDL
 
 write.csv(RPAs_Raw,"Data/RPAs_Raw.csv",row.names=FALSE)
 
-
 #Detect Outliers limits per station
-Outliers <- RPAs %>%
+Outliers <- RPAs %>%  
 bind_rows(RPAs_midflow) %>%
 mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
 group_by(Station) %>%
@@ -140,7 +139,7 @@ summarise(n=n(),mean=mean(TPO4,na.rm=TRUE),median=median(TPO4,na.rm=TRUE),`Q1`=q
 
 write.csv(Outliers, "Data/Outliers.csv",row.names=FALSE)
 
-#remove outliers and  
+#remove outliers   
 RPAs_outliers_removed <- RPAs_Raw %>%
 mutate(Month=month(Date,label=TRUE)) %>%
 mutate(Day=day(Date)) %>%
@@ -162,8 +161,14 @@ mutate(TPO4=case_when(Station=="G333" & TPO4 >193.25 ~ 193.25,
                       Station=="G384" & TPO4 >39.00 ~ 39.00,
                       TRUE~as.numeric(as.character(TPO4))))     #Replace outliers with quantile(.75)+1.5*IQR
 
+#Keep Outliers
+RPAs_tidy <- RPAs_Raw %>%
+mutate(Month=month(Date,label=TRUE),Day=day(Date),Time=hour(Date)+ minute(Date)/60,Year=year(Date),Hour=hour(Date),Minute=minute(Date),Date=as.Date(Date)) %>%
+mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
+mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow"))      #Add flowpath position
   
-RPAs_Sorted <- RPAs_outliers_removed %>%
+RPAs_Sorted <- RPAs_tidy %>%
 group_by(Station,Year,Day,Month) %>%
 mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
 mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
@@ -172,8 +177,18 @@ mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`TRP Daily Mean`=mean(TRP,na.rm = TR
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,`TRP Diff from daily mean`=TRP-`TRP Daily Mean`) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
 
-
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
+
+RPAs_Sorted_outliers_removed <- RPAs_outliers_removed %>%
+group_by(Station,Year,Day,Month) %>%
+mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
+mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
+mutate(Scaled_Value=TPO4/max(TPO4)) %>%
+mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`TRP Daily Mean`=mean(TRP,na.rm = TRUE)) %>%
+mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,`TRP Diff from daily mean`=TRP-`TRP Daily Mean`) %>%
+mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100)
+
+write.csv(RPAs_Sorted_outliers_removed, "Data/RPAs Sorted outliers removed.csv",row.names=FALSE)
 
 # Step 3: Import and Tidy Stage from flowway inflows and ouflows---------------------------
 
