@@ -193,8 +193,10 @@ mutate(Diff_24_hour_median=TPO4-`24_hour_median`) %>%
 mutate(`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) 
 
 write.csv(RPAs_Sorted_outliers_removed, "Data/RPAs Sorted outliers removed.csv",row.names=FALSE)
+# Step 2: Create categories for TP concentration --------------------------
 
-# Step 3: Import and Tidy Stage from flowway inflows and ouflows---------------------------
+
+# Step 4: Import and Tidy Stage from flowway inflows and ouflows---------------------------
 
 STA2C3_Stage <- select(read_csv("Data/STA2C3_Stage.csv"),date,STATION,VALUE) %>%
 filter(!is.na(STATION)) %>%
@@ -245,7 +247,7 @@ mutate(`Max Daily Inflow Stage` = factor(`Max Daily Inflow Stage`, levels = c(" 
 
 write.csv(Combined_Stage, "Data/Stage All Flowways.csv",row.names=FALSE)
   
-# Step 4: Import and Tidy Sonde Data ----------------------------------------------
+# Step 5: Import and Tidy Sonde Data ----------------------------------------------
 SONDE_DATA <- read_csv("Data/SONDE_DATA.csv") 
 
 Sonde_Tidy <- SONDE_DATA  %>%
@@ -257,7 +259,7 @@ mutate(Temp_Diff_24_hour_mean=`Avg Hourly Temp`-mean(`Avg Hourly Temp`),SpCond_D
 DO_Diff_24_hour_mean=`Avg Hourly DO`-mean(`Avg Hourly DO`),pH_Diff_24_hour_mean=`Avg Hourly pH`-mean(`Avg Hourly pH`)) 
   
   
-# Step 5: Import and Tidy Weather Data ------------------------------------
+# Step 6: Import and Tidy Weather Data ------------------------------------
 
 S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)  #Rain data at S7
 
@@ -294,7 +296,7 @@ mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,
 mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-5 Max Daily Wind mph", "5-10 Max Daily Wind mph", "10-15 Max Daily Wind mph","15-20 Max Daily Wind mph","20+ Max Daily Wind mph"))) %>% 
 select(-date) 
 
-# Step 6: Import and Tidy Inflow P Data from compliance sites ------------------------------------
+# Step 7: Import and Tidy Inflow P Data from compliance sites ------------------------------------
 
 G378B_Midflow_TP <- read_csv("Data/G378B_Midflow_TP.csv")
 G384B_Midflow <- read_csv("Data/G384B Midflow.csv")
@@ -320,7 +322,8 @@ Inflow_TP_Data <-G378B_tidy %>%
   mutate(`Flowway` = case_when(`Station ID`=="G333C"~"STA-2C3",`Station ID`=="G378B"~"STA-3/4C2",`Station ID`=="G384B"~"STA-3/4C3")) %>%
   select(Date,date,Year,Month,Hour,Minute,`Station ID`,Flowway,`Inflow TP`)
 
-# Step 7: Join Flow and RPA data and save DF --------------------------------------
+
+# Step 8: Join Flow and RPA data and save DF --------------------------------------
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Date","Hour","Flowway")) %>%
 filter(is.finite(Outflow) || is.finite(Inflow)) %>%     #need inflow data
@@ -333,7 +336,7 @@ mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-1
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
-# Step 8: Join with Stage Data and save DF ----------------------------------------------------
+# Step 9: Join with Stage Data and save DF ----------------------------------------------------
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
 left_join(Combined_Stage ,by=c("Flowway","Date","Hour")) %>%
@@ -345,7 +348,7 @@ mutate(`Outflow Stage Diff 24 hour mean`=`Outflow Stage`-`Outflow_Stage_24_hour_
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv",row.names=FALSE)
 
 
-# Step 9: Join with Weather data ------------------------------------------
+# Step 10: Join with Weather data ------------------------------------------
 
 RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow_Stage %>%
 left_join(Combined_Weather ,by=c("Date","Hour","Minute"))
@@ -353,7 +356,7 @@ left_join(Combined_Weather ,by=c("Date","Hour","Minute"))
 write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv",row.names=FALSE)
 
 
-# Step 10: Join with Sonde Data --------------------------------------------
+# Step 11: Join with Sonde Data --------------------------------------------
 
 RPAs_with_Flow_Stage_Weather_Sonde <- RPAs_with_Flow_Stage_Weather %>%
 left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))

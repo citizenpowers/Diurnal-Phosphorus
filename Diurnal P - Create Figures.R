@@ -189,7 +189,7 @@ ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily median`,color=Station
 geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
 facet_wrap(~Station_ID,nrow=1)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,5))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+coord_cartesian(ylim = c(-50,50))+theme(legend.position="bottom")+guides(fill=guide_legend(title="Station"))+
-labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviation from Daily median(%)",x="Hour")+geom_hline(yintercept = c(-6,4,-4,6))
+labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviation from Daily median(%)",x="Hour")
 
 ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
