@@ -193,9 +193,22 @@ mutate(Diff_24_hour_median=TPO4-`24_hour_median`) %>%
 mutate(`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) 
 
 write.csv(RPAs_Sorted_outliers_removed, "Data/RPAs Sorted outliers removed.csv",row.names=FALSE)
+
 # Step 2: Create categories for TP concentration --------------------------
+RPAs_Sorted_concentration <- RPAs_Sorted %>%
+mutate(`Concentration Range` = case_when(between(`24_hour_median`,0,10)~"0-10",
+                                         between(`24_hour_median`,10,20)~"10-20",
+                                         between(`24_hour_median`,20,30)~"20-30",
+                                         between(`24_hour_median`,30,40)~"30-40",
+                                         between(`24_hour_median`,40,50)~"40-50",
+                                         between(`24_hour_median`,50,100)~"50-100",
+                                         `24_hour_median`>100~"100+"))  %>%     #add concentration range
+mutate(`Concentration Range` = factor(`Concentration Range`, levels = c("0-10", "10-20","20-30","30-40","40-50","50-100","100+")))
+  
+RPAs_Sorted_concentration %>% group_by(`Concentration Range`) %>% summarise(n=n())
+  
 
-
+write.csv(RPAs_Sorted_concentration, "Data/RPAs Sorted concentration.csv",row.names=FALSE)
 # Step 4: Import and Tidy Stage from flowway inflows and ouflows---------------------------
 
 STA2C3_Stage <- select(read_csv("Data/STA2C3_Stage.csv"),date,STATION,VALUE) %>%

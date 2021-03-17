@@ -23,6 +23,9 @@ RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
 #RPA tidy data outliers removed and replaced with quantile(.75)+1.5*IQR
 RPAs_Sorted_outliers_removed <- read_csv("Data/RPAs Sorted outliers removed.csv")
 
+#RPA data with concentration categories
+RPAs_Sorted_outliers_removed <- read_csv("Data/RPAs Sorted concentration.csv")
+
 #Import Flow Data
 Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date = col_date(format = "%Y-%m-%d"),  Inflow = col_number(), `Inflow HLR` = col_number(), Outflow = col_number(), `Outflow HLR` = col_number()))
 
@@ -58,15 +61,10 @@ ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Statio
 
 
 
-
-
 date_range_summary <- RPAs_Sorted %>%
 filter(Date<"2017-01-01") %>%  
 group_by(Station) %>%
 summarise(n=n(),min=min(Date),max=max(Date))
-
-  
-
 
 
 
@@ -76,6 +74,9 @@ group_by(Hour,Station) %>%
 summarise(`Number of Observations`=sum(!is.na(TPO4)),`Total missing data`=sum(is.na(TPO4)),n=n()) %>% 
 mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) %>%
 gather("Data Type","Value",3:4)
+
+#histogram of median TP concentrations 
+ggplot(RPAs_Sorted,aes(`24_hour_median`))+geom_histogram()+facet_wrap(~Station,scales="free")+theme_bw()
 
 #missing data. Ist there a pattern in the missing data by time of day? 
 ggplot(RPA_summary,aes(Hour,Value,fill=`Data Type`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
@@ -96,9 +97,6 @@ group_by(Station) %>%
 summarise(`Skewness type 1`=skewness(TPO4,na.rm=TRUE,type=1),`Skewness type 2`=skewness(TPO4,na.rm=T,type=2),`Skewness type 3`=skewness(TPO4,na.rm=T,type=3))
 
 # RPA TP Variation figures ------------------------------------------------------------
-
-
-
 
 #Hourly TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
@@ -221,6 +219,33 @@ scale_y_continuous(limits=c(0,80),breaks =seq(0,80,10))+facet_wrap(~`Station`,nr
 labs(title="TPO4 vs Flow by Station and Season",y="TPO4 (ug/L)",x="Flow (cfs)")
 
 ggsave("Figures/TPO4 vs Flow by Station and Season.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+
+
+
+# Concentration and TP variation ------------------------------------------
+
+#Hourly TP Variation from the Daily Median by Station
+ggplot(filter(RPAs_Sorted_concentration,!is.na(Diff_24_hour_median)),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Concentration Range`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Deviation from Daily Median by Hour",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Deviation from the Daily Median by Concentration Range.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Median by Station percent 
+ggplot(filter(RPAs_Sorted_concentration,!is.na(`Percent difference from daily mean`)),aes(Time,`Percent difference from daily mean`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Concentration Range`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,10))+coord_cartesian(ylim = c(-50,50))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviation from Daily median (%)",x="Hour")
+
+ggsave("Figures/Hourly Percent TP Deviation from the Daily Median by Concentration Range.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+
 
 
 
