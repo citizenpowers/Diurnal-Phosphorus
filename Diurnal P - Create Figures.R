@@ -10,14 +10,7 @@ library(lubridate)
 library(tidyr)
 library(maptools)
 library(ggpmisc)
-citation("dplyr")
-citation("tidyr")
-citation("scales")
-citation("ggpmisc")
-citation("ggplot2")
-citation("lubridate")
-citation("maptools")
-citation("ggpmisc")
+library(e1071)
 
 
 # Import data for RPA analysis -------------------------------------------------------------
@@ -26,6 +19,9 @@ RPAs_Raw <-  read_csv("Data/RPAs_Raw.csv")
 
 #RPA tidy data
 RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
+
+#RPA tidy data outliers removed and replaced with quantile(.75)+1.5*IQR
+RPAs_Sorted_outliers_removed <- read_csv("Data/RPAs Sorted outliers removed.csv")
 
 #Import Flow Data
 Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date = col_date(format = "%Y-%m-%d"),  Inflow = col_number(), `Inflow HLR` = col_number(), Outflow = col_number(), `Outflow HLR` = col_number()))
@@ -59,6 +55,21 @@ ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, 
 #Hour at which samples were collected over time 
 ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
 
+
+
+
+
+
+date_range_summary <- RPAs_Sorted %>%
+filter(Date<"2017-01-01") %>%  
+group_by(Station) %>%
+summarise(n=n(),min=min(Date),max=max(Date))
+
+  
+
+
+
+
 RPA_summary <-RPAs_Sorted %>%
 mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
 group_by(Hour,Station) %>%
@@ -77,13 +88,21 @@ ggplot(RPAs_Raw,aes(TPO4))+geom_histogram()+facet_wrap(~Station,scales="free")+t
 
 ggplot(RPAs_Raw,aes(sample=TPO4))+geom_qq()+facet_wrap(~Station,scales="free")+stat_qq_line()+theme_bw()
 
-ggplot(RPAs_Raw,aes(TPO4))+geom_boxplot()+facet_wrap(~Station,scales="free")+theme_bw()
+ggplot(RPAs_Raw,aes(Station,TPO4,fill=Station))+geom_boxplot()+theme_bw()
 
+#measure skewness
+RPA_skew <-RPAs_Sorted %>%
+group_by(Station) %>%
+summarise(`Skewness type 1`=skewness(TPO4,na.rm=TRUE,type=1),`Skewness type 2`=skewness(TPO4,na.rm=T,type=2),`Skewness type 3`=skewness(TPO4,na.rm=T,type=3))
 
 # RPA TP Variation figures ------------------------------------------------------------
 
+
+
+
 #Hourly TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+#geom_smooth(data=RPAs_Sorted_outliers_removed,aes(Time,Diff_24_hour_mean),method="loess",color="red")+  #comparison to outliers removed
 facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
@@ -92,12 +111,70 @@ ggsave("Figures/Hourly TP Variation from the Daily Mean by Station.jpeg", plot =
 
 #Hourly TP Variation from the Daily Mean by Flowpath and POsition
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_grid(Flowway~`Flowpath Region`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+facet_grid(Flowway~`Flowpath Region`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+coord_cartesian(ylim = c(-10,10))+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Hourly TP Variation from the Daily Mean by Flowway and Region.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+#Hourly TP Variation from the Daily Median by Flowpath and Position
+ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+geom_vline(xintercept =c(10,15))+
+labs(title="Deviation from Daily Median by Hour",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly TP Variation from the Daily Median by Flowway and Region.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Median by Station
+ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Deviation from Daily Median by Hour",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Variation from the Daily Median.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+
+#Hourly TP Variation from the Daily Median by Station time shifted 12 hours 
+rpa_sorted_time_shift <- RPAs_Sorted %>%
+mutate(`time shift`=Time+12)%>%
+mutate(`time shift`=ifelse(`time shift`>24,`time shift`-24,`time shift`))
+
+ggplot(rpa_sorted_time_shift,aes(`time shift`,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+coord_cartesian(ylim = c(-10,10))+geom_vline(xintercept =c(12,16))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,2))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom")+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+#diffrent types of smoothing 
+#geom_smooth(method="loess",color="blue",method.args = list(family = "symmetric",degree=2))+
+#geom_smooth(method="loess",color="green",method.args = list(family = "symmetric",degree=1))+
+#geom_smooth(method="loess",color="purple",method.args = list(family = "symmetric",degree=0))+
+#geom_smooth(method="loess",color="orange",method.args = list(family = "guassian",degree=1))+
+#geom_smooth(data=RPAs_Sorted_outliers_removed,aes(Time,Diff_24_hour_median),method="loess",color="red")+  #comparison to smoothed mean
+
+#Hourly TP Variation from the Daily log(mean) by Station
+ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_log_trans,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+#geom_smooth(data=RPAs_Sorted_outliers_removed,aes(Time,Diff_24_hour_median),method="loess",color="red")+  #comparison to smoothed mean
+facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+#scale_y_continuous(breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+coord_cartesian(ylim = c(-10,10))+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+#Hourly TP Variation from the Daily cube root(mean) by Station
+ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_cube_root,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+#geom_smooth(data=RPAs_Sorted_outliers_removed,aes(Time,Diff_24_hour_median),method="loess",color="red")+  #comparison to smoothed mean
+facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-.1,.1),breaks = seq(-.1,1,.01))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+#boxplots medians
+ggplot(RPAs_Sorted,aes(Hour,Diff_24_hour_median,fill=Station))+geom_boxplot()+geom_smooth(method="loess")+
+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 #Hourly % TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
@@ -106,6 +183,15 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Percent Variation from Daily Mean by Hour",y="TPO4 Percent Deviation from Daily (%)",x="Hour")
 
 ggsave("Figures/Hourly Percent Variation in TP from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly % TP Variation from the Daily Median by Station
+ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily median`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+facet_wrap(~Station_ID,nrow=1)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,5))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+coord_cartesian(ylim = c(-50,50))+theme(legend.position="bottom")+guides(fill=guide_legend(title="Station"))+
+labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviation from Daily median(%)",x="Hour")+geom_hline(yintercept = c(-6,4,-4,6))
+
+ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly TP Variation from the Daily Mean by Station and month
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
