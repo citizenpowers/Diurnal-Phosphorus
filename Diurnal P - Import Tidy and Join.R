@@ -81,7 +81,7 @@ fill(`G377A-C-Q`,`G377B-C-Q`,`G377C-C-Q`,`G377D-C-Q`,`G377E-C-Q`) %>%
 mutate(G377=rowSums(.[2:6],na.rm=TRUE))          
 
 #Combined Outflow over entire flowway
-Combined_BK_Flow <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,10,01,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,10,01,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
 left_join(G381_C_BK,by="date") %>%  #combine data from G381, G334, G379D
 left_join(G379_C_BK,by="date") %>%
 left_join(G334_S_BK,by="date")  %>%
@@ -90,8 +90,9 @@ left_join(G380_C_BK,by="date") %>%
 left_join(G377_C_BK,by="date") %>%
 select(date,G381,G379,G334,G333,G380,G377) %>%
 arrange(date)  %>%
-fill(G381,G379,G334,G333,G380,G377) %>% 
-distinct() %>%
+fill(G381,G379,G334,G333,G380,G377) 
+
+Combined_BK_Flow <-Combined_BK_Flow_step1 %>% 
 gather("Station","Flow",G381,G379,G334,G333,G380,G377) %>%
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G377"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G333"~"STA-2 Central")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G377"~"Inflow",`Station`=="G381"~"Outflow",`Station`=="G333"~"Inflow",`Station`=="G380"~"Inflow"))  %>%     #Add flowpath position
@@ -102,7 +103,7 @@ mutate(`Inflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Regio
 mutate(Date=as.Date(date)) %>%
 mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
 group_by(`Flowway`,Date,Hour) %>%
-summarise(Outflow=mean(Outflow,na.rm = TRUE),`Outflow HLR`=mean(`Outflow HLR`,na.rm=TRUE),Inflow=mean(Inflow,na.rm = TRUE),`Inflow HLR`=mean(`Inflow HLR`,na.rm=TRUE))
+summarise(Outflow=mean(Outflow,na.rm = TRUE),`Outflow HLR`=mean(`Outflow HLR`,na.rm=TRUE)*60.4556,Inflow=mean(Inflow,na.rm = TRUE),`Inflow HLR`=mean(`Inflow HLR`,na.rm=TRUE)*60.4556) #convert to HLR (24hours *60 min * 60 Sec) /day  * (1 FT^3/sec) *(30.48 cm/1ft) * (1 acre/43560 ft^2) 
 
 write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv",row.names=FALSE)
 
@@ -163,6 +164,7 @@ mutate(TPO4=case_when(Station=="G333" & TPO4 >193.25 ~ 193.25,
 #Keep Outliers
 RPAs_tidy <- RPAs_Raw %>%
 mutate(Month=month(Date,label=TRUE),Day=day(Date),Time=hour(Date)+ minute(Date)/60,Year=year(Date),Hour=hour(Date),Minute=minute(Date),Date=as.Date(Date)) %>%
+mutate(Month = factor(Month, levels=month.abb)) %>%
 mutate(Station_ID=Station) %>%
 mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
@@ -274,40 +276,63 @@ DO_Diff_24_hour_mean=`Avg Hourly DO`-mean(`Avg Hourly DO`),pH_Diff_24_hour_mean=
   
 # Step 6: Import and Tidy Weather Data ------------------------------------
 
-S7_R_BK <- select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4)  #Rain data at S7
+S7_R_BK <- mutate(select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4),date=dmy_hms(date))  #Rain data at S7
 
-S7_E_BK <- select(rename(read_csv("Data/S7_E_BK.csv",  skip = 2),date = 1,"EVAP S7"=4),1,4)  #Evaporation data at S7
+S7_R_DA <- mutate(select(rename(read_csv("Data/S7_R_DA.csv",  skip = 3),Date = 3,"Rain S7 DA"=4),3,4),Date=dmy(Date))  #Rain data at S7
 
-BELLW_WNVS_BK <- select(rename(read_csv("Data/BELLW_WNVS_BK.csv",  skip = 2),date = 1,"WIND BELLEGLADE"=4),1,4)  #Evaporation data at S7
+S7_E_BK <- mutate(select(rename(read_csv("Data/S7_E_BK.csv",  skip = 2),date = 1,"EVAP S7"=4),1,4),date=dmy_hms(date))  #Evaporation data at S7
 
+BELLW_WNVS_BK <- mutate(select(rename(read_csv("Data/BELLW_WNVS_BK.csv",  skip = 2),date = 1,"WIND BELLEGLADE"=4),1,4),date=mdy_hm(date)) #max daily windspeed in at belleglade weather station
 
-Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,04,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
-full_join(mutate(S7_R_BK,date=dmy_hms(date)),by="date") %>%  
-full_join(mutate(S7_E_BK,date=dmy_hms(date)),by="date") %>%   
-full_join(mutate(BELLW_WNVS_BK,date=dmy_hms(date)),by="date") %>%   
-arrange(date) %>%
-fill(`Rain S7`,`WIND BELLEGLADE`) %>%       #This fills in chronologically with last known value for RAIN and WIND. Not sure that fill down is good idea for EVAP data
+S7_R_BK_tidy <- S7_R_BK %>%
+mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%  
+group_by(Date,Hour,Minute) %>%
+summarise(`Rain S7`=mean(`Rain S7`,na.rm=TRUE))
+
+S7_E_BK_tidy <- S7_E_BK %>%
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
+select(-date)
+
+BELLW_WNVS_BK_tidy <- BELLW_WNVS_BK %>%
+mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
+select(-date)
+
+Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,14,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>% 
+select(-date) %>%
+left_join(S7_R_DA,by="Date")%>%  
+full_join(S7_R_BK_tidy,by=c("Date","Hour","Minute")) %>%  
+full_join(S7_E_BK_tidy,by=c("Date","Hour","Minute")) %>%    
+full_join(BELLW_WNVS_BK_tidy,by=c("Date","Hour","Minute")) %>%   
+arrange(Date) %>%
+fill(`Rain S7`,`WIND BELLEGLADE`) %>%       #This fills in chronologically with last known value for RAIN and WIND. Not sure that fill down is good idea for EVAP data
 group_by(Date) %>%
+mutate(`Daily Rainfall Range` = case_when(max(`Rain S7 DA`)==0~ "No Rainfall",
+                                 between(max(`Rain S7 DA`),0.001,0.1)~ "0-.1 (in) Rainfall",
+                                 between(max(`Rain S7 DA`),.1,.25)~ "0.1-.25 (in) Rainfall",
+                                 between(max(`Rain S7 DA`),.25,0.5)~ "0.25-.5 (in) Rainfall",
+                                 between(max(`Rain S7 DA`),.5,0.75)~ "0.5-.75 (in) Rainfall",
+                                 between(max(`Rain S7 DA`),.75,1)~ "0.75-1.0 (in) Rainfall",
+                                 max(`Rain S7 DA`)>1~ "1.0+ (in) Rainfall")) %>%  
+mutate(`Daily Rainfall Range` = factor(`Daily Rainfall Range`, levels = c("No Rainfall", "0-.1 (in) Rainfall","0.1-.25 (in) Rainfall","0.25-.5 (in) Rainfall","0.5-.75 (in) Rainfall","0.75-1.0 (in) Rainfall","1.0+ (in) Rainfall"))) %>% 
 mutate(`Rainy Day` = case_when(max(`Rain S7`)==0~ "Dry Day",
                      between(max(`Rain S7`),0,0.015)~ "0-.01 Rain Day",
                      between(max(`Rain S7`),.015,0.045)~ "0.01-.03 Rain Day",
                      between(max(`Rain S7`),.045,0.095)~ "0.04-.09 Rain Day",
                      max(`Rain S7`)>.095~ "0.10+ Rain Day")) %>%
 mutate(`Rainy Day` = factor(`Rainy Day`, levels = c("Dry Day", "0-.01 Rain Day", "0.01-.03 Rain Day","0.04-.09 Rain Day","0.10+ Rain Day"))) %>% 
-mutate(`Max Daily Evap` = case_when(between(max(`EVAP S7`,na.rm=TRUE),0,0.249)~ "0-.25 EVAP Day",
-                                    between(max(`EVAP S7`,na.rm=TRUE),0.25,0.499)~ ".25-.5 EVAP Day",
+mutate(`Max Daily Evap` = case_when(between(max(`EVAP S7`,na.rm=TRUE),0,.1)~ "0-.1 EVAP Day",
+                                    between(max(`EVAP S7`,na.rm=TRUE),.1,0.249)~ "0.1-.25 EVAP Day",
+                                    between(max(`EVAP S7`,na.rm=TRUE),0.25,0.499)~ "0.25-.5 EVAP Day",
                                     between(max(`EVAP S7`,na.rm=TRUE),.5,0.749)~ "0.5-.75 EVAP Day",
                                     between(max(`EVAP S7`,na.rm=TRUE),.75,.999)~ "0.75-1.0 EVAP Day",
                                     max(`EVAP S7`,na.rm=TRUE)>1~ "1.0+ EVAP Day")) %>%
-mutate(`Max Daily Evap` = factor(`Max Daily Evap`, levels = c("0-.25 EVAP Day", ".25-.5 EVAP Day", "0.5-.75 EVAP Day","0.75-1.0 EVAP Day","1.0+ EVAP Day"))) %>% 
-mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,4.999)~ "0-5 Max Daily Wind mph",
-                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),5,9.99)~ "5-10 Max Daily Wind mph",
-                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),10,14.99)~ "10-15 Max Daily Wind mph",
-                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),15,19.99)~ "15-20 Max Daily Wind mph",
-                                    max(`WIND BELLEGLADE`,na.rm=TRUE)>20~ "20+ Max Daily Wind mph")) %>%
-mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-5 Max Daily Wind mph", "5-10 Max Daily Wind mph", "10-15 Max Daily Wind mph","15-20 Max Daily Wind mph","20+ Max Daily Wind mph"))) %>% 
-select(-date) 
+mutate(`Max Daily Evap` = factor(`Max Daily Evap`, levels = c("0-.1 EVAP Day", "0.1-.25 EVAP Day","0.25-.5 EVAP Day", "0.5-.75 EVAP Day","0.75-1.0 EVAP Day","1.0+ EVAP Day"))) %>% 
+mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,9.99)~ "0-10 Max Daily Wind (mph)",
+                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),10,14.99)~ "10-15 Max Daily Wind (mph)",
+                                    between(max(`WIND BELLEGLADE`,na.rm=TRUE),15,19.99)~ "15-20 Max Daily Wind (mph)",
+                                    max(`WIND BELLEGLADE`,na.rm=TRUE)>20~ "20+ Max Daily Wind (mph)")) %>%
+mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-10 Max Daily Wind (mph)", "10-15 Max Daily Wind (mph)","15-20 Max Daily Wind (mph)","20+ Max Daily Wind (mph)")))  
 
 # Step 7: Import and Tidy Inflow P Data from compliance sites ------------------------------------
 
@@ -342,10 +367,11 @@ left_join(Combined_BK_Flow ,by=c("Date","Hour","Flowway")) %>%
 filter(is.finite(Outflow) || is.finite(Inflow)) %>%     #need inflow data
 mutate(Outflow=as.numeric(Outflow)) %>%
 mutate(Season=if_else(between(month(Date),5,11),"Wet Season","Dry Season")) %>%
-mutate(`Outflow Category` = as.factor(case_when( between(Outflow,0,1) ~ "0-1 (cfs)",between(Outflow,1,100) ~ "1-100 (cfs)",between(Outflow,100,250) ~ "100-250 (cfs)",between(Outflow,250,500) ~ "250-500 (cfs)",between(Outflow,500,1000) ~ "500-1000 (cfs)", Outflow>1000 ~ "1000+ (cfs)", Outflow<0 ~ "Reverse Flow"))) %>%
-mutate(`Inflow Category` = as.factor(case_when( between(Inflow,0,1) ~ "0-1 (cfs)",between(Inflow,1,100) ~ "1-100 (cfs)",between(Inflow,100,250) ~ "100-250 (cfs)",between(Inflow,250,500) ~ "250-500 (cfs)",between(Inflow,500,1000) ~ "500-1000 (cfs)", Inflow>1000 ~ "1000+ (cfs)", Inflow < 0 ~ "Reverse Flow"))) %>%
-mutate(`Outflow Category`=factor(`Outflow Category`,levels = c("Reverse Flow","0-1 (cfs)","1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
-mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-1 (cfs)","1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) 
+mutate(`Outflow Category` = as.factor(case_when( between(Outflow,0,1) ~ "0-1 (cfs)",between(Outflow,1,500) ~ "1-500 (cfs)",between(Outflow,500,1000) ~ "500-1000 (cfs)", Outflow>1000 ~ "1000+ (cfs)", Outflow<0 ~ "Reverse Flow"))) %>%
+mutate(`Inflow Category` = as.factor(case_when( between(Inflow,0,1) ~ "0-1 (cfs)",between(Inflow,1,500) ~ "1-500 (cfs)",between(Inflow,500,1000) ~ "500-1000 (cfs)", Inflow>1000 ~ "1000+ (cfs)", Inflow < 0 ~ "Reverse Flow"))) %>%
+mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-1 (cfs)","1-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
+mutate(`Outflow HLR Category` = as.factor(case_when( between(`Outflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Outflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Outflow HLR`,10,20) ~ "10-20 (cm/day)",`Outflow HLR`>20 ~ "20+ (cm/day)", `Outflow HLR`<0 ~ "Reverse Flow"))) %>%
+mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) 
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 

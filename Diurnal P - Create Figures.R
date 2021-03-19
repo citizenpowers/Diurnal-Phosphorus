@@ -24,7 +24,7 @@ RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
 RPAs_Sorted_outliers_removed <- read_csv("Data/RPAs Sorted outliers removed.csv")
 
 #RPA data with concentration categories
-RPAs_Sorted_outliers_removed <- read_csv("Data/RPAs Sorted concentration.csv")
+RPAs_Sorted_concentration <- read_csv("Data/RPAs Sorted concentration.csv")
 
 #Import Flow Data
 Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date = col_date(format = "%Y-%m-%d"),  Inflow = col_number(), `Inflow HLR` = col_number(), Outflow = col_number(), `Outflow HLR` = col_number()))
@@ -58,15 +58,10 @@ ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, 
 #Hour at which samples were collected over time 
 ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
 
-
-
-
 date_range_summary <- RPAs_Sorted %>%
 filter(Date<"2017-01-01") %>%  
 group_by(Station) %>%
 summarise(n=n(),min=min(Date),max=max(Date))
-
-
 
 RPA_summary <-RPAs_Sorted %>%
 mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
@@ -77,6 +72,18 @@ gather("Data Type","Value",3:4)
 
 #histogram of median TP concentrations 
 ggplot(RPAs_Sorted,aes(`24_hour_median`))+geom_histogram()+facet_wrap(~Station,scales="free")+theme_bw()
+
+#histogram of Inflow categories
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous InFlow`==TRUE),aes(`Inflow`))+geom_histogram()+facet_wrap(~Station,scales="free")+theme_bw()
+
+#histogram of HLR 
+ggplot(RPAs_with_Flow,aes(`Outflow HLR`))+geom_histogram()+theme_bw()+facet_wrap(~Station,scales="free") 
+
+
+#histogram of median Daily Rainfall 
+ggplot(RPAs_with_Flow_Stage_Weather,aes(`Rain S7 DA`))+geom_histogram(binwidth = .05)+facet_wrap(~Station)+
+scale_x_continuous(breaks = seq(0,1,.1))+coord_cartesian(xlim = c(0,1))+
+theme_bw()
 
 #missing data. Ist there a pattern in the missing data by time of day? 
 ggplot(RPA_summary,aes(Hour,Value,fill=`Data Type`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
@@ -191,6 +198,29 @@ labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviati
 
 ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+
+# Hourly TP variation by month --------------------------------------------
+
+#Hourly TP Variation from the Daily Median by Station
+ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(Station_ID~Month)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Hourly Deviation from Daily Median by Month",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Variation from the Daily Median by month.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly % TP Variation from the Daily Median by Station and month
+ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily median`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+facet_grid(Station_ID~Month)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,5))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+coord_cartesian(ylim = c(-50,50))+theme(legend.position="bottom")+guides(fill=guide_legend(title="Station"))+
+labs(title="Hourly Percent Deviation from Daily Median by Month",y="TPO4 Percent Deviation from Daily median(%)",x="Hour")
+
+ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+
 #Hourly TP Variation from the Daily Mean by Station and month
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_grid(Station~Month)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
@@ -236,17 +266,152 @@ labs(title="Deviation from Daily Median by Hour",y="TPO4 Deviation from daily me
 ggsave("Figures/Hourly TP Deviation from the Daily Median by Concentration Range.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly TP Variation from the Daily Median by Station percent 
-ggplot(filter(RPAs_Sorted_concentration,!is.na(`Percent difference from daily mean`)),aes(Time,`Percent difference from daily mean`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+ggplot(filter(RPAs_Sorted_concentration,!is.na(`Percent difference from daily median`)),aes(Time,`Percent difference from daily median`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
 geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(`Concentration Range`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
-geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,10))+coord_cartesian(ylim = c(-50,50))+
-scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,10),sec.axis = sec_axis(~.,name=expression(paste("Median Daily TP Range ( ",mu~L^-1,")"))))+coord_cartesian(ylim = c(-50,50))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+
+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), axis.text.y.right = element_blank(),axis.ticks.y.right = element_blank())+
 labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviation from Daily median (%)",x="Hour")
 
-ggsave("Figures/Hourly Percent TP Deviation from the Daily Median by Concentration Range.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Hourly Percent TP Deviation from the Daily Median by Concentration Range.jpeg", plot = last_plot(), width = 8, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 
 
+
+# Hourly TP Variation with flow conditions --------------------------------
+#Hourly TP Variation from the Daily Median by inflow category 
+ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow"),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Inflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Inflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Inflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Median by Outflow category 
+ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Outflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+
+# Hourly TP Variation with flow condition- Days of continuous Only ------------------------------------------------
+
+
+#create DF of days where hourly average flow does not deviate by more than 33% from daily median
+Days_with_continual_flow <- Combined_BK_Flow %>%
+  group_by(`Flowway`,Date) %>%
+  summarize(`Min Outflow`=min(Outflow,na.rm=TRUE),`Mean Outflow`=mean(Outflow,na.rm=TRUE),`Max Outflow`=max(Outflow,na.rm=TRUE),`Min Inflow`=min(Inflow,na.rm=TRUE),`Mean Inflow`=mean(Inflow,na.rm=TRUE),`Max Inflow`=max(Inflow,na.rm=TRUE)) %>% 
+  mutate(`Continuous OutFlow`=ifelse(`Min Outflow`>=`Mean Outflow`*.66 &`Max Outflow` <=`Mean Outflow`*1.33,TRUE,FALSE)) %>% #days with all outflow within 33% of mean
+  mutate(`Continuous InFlow`=ifelse(`Min Inflow`>=`Mean Inflow`*.66 &`Max Inflow` <=`Mean Inflow`*1.33,TRUE,FALSE)) %>%   #days with all inflow within 33% of mean
+  select(`Flowway`,Date,`Continuous OutFlow`,`Continuous InFlow`)
+
+#RPAS with flow data from days of continuous flow only
+RPAs_with_Flow_Complete_Days <-  RPAs_with_Flow %>%
+left_join(Days_with_continual_flow)
+
+RPAs_Sorted %>% 
+  summarise(n=n(),sum(!is.na(TPO4)))  
+
+RPAs_with_Flow_Complete_Days %>%
+  filter(!is.na(TPO4)) %>%
+  summarise(`Day of continuous inflow`=sum(`Continuous InFlow`),`Day of continuous outflow`=sum(`Continuous OutFlow`),
+            `Day of continuous inflow and outflow`=sum(ifelse(`Continuous OutFlow`== TRUE & `Continuous InFlow`==TRUE,T,F)))
+
+RPAs_with_Flow_Complete_Days %>%
+  filter(`Outflow Category`!="Reverse Flow") %>%  
+  group_by(`Outflow Category`) %>%
+  summarise(`Day of continuous inflow`=sum(`Continuous InFlow`),`Day of continuous outflow`=sum(`Continuous OutFlow`))  
+
+#Hourly TP Variation from the Daily Mean by Station and outflow category
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE & `Continuous InFlow`==TRUE,!is.na(`Outflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+  facet_grid(Station~`Outflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+  labs(title="Variation from Daily Mean by Hour from Days with Steady outflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Mean by Station and Inflow category
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous InFlow`==TRUE,!is.na(`Inflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+  facet_grid(Station~`Inflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+  labs(title="Variation from Daily Mean by Hour from Days with Steady Inflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Figure RPA and OUtflow Continous Days
+ggplot(RPAs_with_Flow_Complete_Days,aes(Outflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+  facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,20))+scale_colour_brewer( type = "qual", palette = "Set2")+
+  labs(title="TPO4 vs Flow by Station from Days of Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+
+ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Figure RPA and Intflow Continous Days
+ggplot(RPAs_with_Flow_Complete_Days,aes(Inflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+  facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,10))+scale_colour_brewer( type = "qual", palette = "Set2")+
+  labs(title="TPO4 vs Flow by Station from Days of Continuous Inflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+
+ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Figure RPA and flow and month from days with continuous outflow
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE,!is.na(`Outflow Category`)),aes(Hour,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(color="black")+theme_bw()+
+  facet_grid(Station~Month,scales = "free_x")+scale_y_continuous(limits=c(-10,10),breaks =seq(-10,10,2))+scale_colour_brewer( type = "qual", palette = "Set2")+
+  geom_hline(yintercept=0)+labs(title="TPO4 vs Flow by Station from Days with Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+
+ggsave("Figures/TPO4 vs Flow by Station and Month from days with Continuous Outlow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly diel P with Inflow conditions complete days from days of stable flow
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Inflow Category`!="Reverse Flow", `Continuous InFlow`==TRUE),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+  theme_bw()+facet_grid(`Inflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+  geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+  labs(title="Hourly Deviation from Daily Median by Inflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Inflow Strength- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Median by Outflow category from days of stable flow
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Outflow Category`!="Reverse Flow",`Continuous OutFlow`==TRUE) ,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+  theme_bw()+facet_grid(`Outflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+  geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+  labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+
+# Hourly TP Variation with flow condition HLR- Days of continuous Only  -----------------
+#run script "Hourly TP Variation with flow condition- Days of continuous Only" first
+#Hourly diel P with Inflow conditions complete days from days of stable flow
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Inflow Category`!="Reverse Flow", `Continuous InFlow`==TRUE),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Outflow HLR Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Inflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Inflow Strength- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Median by Outflow category from days of stable flow
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Outflow Category`!="Reverse Flow",`Continuous OutFlow`==TRUE) ,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Outflow HLR Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+# Flow vs TP  -------------------------------------------------------------
+# TP vs inflow Outflow category 
+ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(0,200,50))+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,200))+
+#scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 
 # TRP diel trend? ---------------------------------------------------------
@@ -257,61 +422,6 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="TRP Variation from Daily Mean by Hour",y="TRP Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Hourly TRP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-
-# RPA TP Variation figures- Days of continuous Only ------------------------------------------------
-
-
-#create DF of days where hourly average flow does not deviate by more than 25% from daily mean
-Days_with_continual_flow <- Combined_BK_Flow %>%
-group_by(`Flowway`,Date) %>%
-summarize(`Min Outflow`=min(Outflow,na.rm=TRUE),`Mean Outflow`=mean(Outflow,na.rm=TRUE),`Max Outflow`=max(Outflow,na.rm=TRUE),`Min Inflow`=min(Inflow,na.rm=TRUE),`Mean Inflow`=mean(Inflow,na.rm=TRUE),`Max Inflow`=max(Inflow,na.rm=TRUE)) %>% 
-mutate(`Continuous OutFlow`=ifelse(`Min Outflow`>=`Mean Outflow`*.75 &`Max Outflow` <=`Mean Outflow`*1.25,TRUE,FALSE)) %>% #days with all outflow within 25% of mean
-mutate(`Continuous InFlow`=ifelse(`Min Inflow`>=`Mean Inflow`*.75 &`Max Inflow` <=`Mean Inflow`*1.25,TRUE,FALSE)) %>%   #days with all inflow within 25% of mean
-select(`Flowway`,Date,`Continuous OutFlow`,`Continuous InFlow`)
-
-#RPAS with flow data from days of continuous flow only
-RPAs_with_Flow_Complete_Days <-  RPAs_with_Flow %>%
-left_join(Days_with_continual_flow)
-
-#Hourly TP Variation from the Daily Mean by Station and outflow category
-ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE,!is.na(`Outflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_grid(Station~`Outflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-labs(title="Variation from Daily Mean by Hour from Days with Steady outflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
-
-ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-#Hourly TP Variation from the Daily Mean by Station and Inflow category
-ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous InFlow`==TRUE,!is.na(`Inflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_grid(Station~`Inflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-labs(title="Variation from Daily Mean by Hour from Days with Steady Inflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
-
-ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-#Figure RPA and OUtflow Continous Days
-ggplot(RPAs_with_Flow_Complete_Days,aes(Outflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,20))+scale_colour_brewer( type = "qual", palette = "Set2")+
-labs(title="TPO4 vs Flow by Station from Days of Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
-
-ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-#Figure RPA and Intflow Continous Days
-ggplot(RPAs_with_Flow_Complete_Days,aes(Inflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,10))+scale_colour_brewer( type = "qual", palette = "Set2")+
-labs(title="TPO4 vs Flow by Station from Days of Continuous Inflow",y="TPO4 (ug/L)",x="Flow (cfs)")
-
-ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-#Figure RPA and flow and month from days with continuous outflow
-ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE,!is.na(`Outflow Category`)),aes(Hour,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(color="black")+theme_bw()+
-facet_grid(Station~Month,scales = "free_x")+scale_y_continuous(limits=c(-10,10),breaks =seq(-10,10,2))+scale_colour_brewer( type = "qual", palette = "Set2")+
-geom_hline(yintercept=0)+labs(title="TPO4 vs Flow by Station from Days with Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
-
-ggsave("Figures/TPO4 vs Flow by Station and Month from days with Continuous Outlow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-#Need figure of HLR categories vs diel P tend
 
 
 # Daylight analysis -------------------------------------------------------
@@ -354,6 +464,8 @@ ggsave("Figures/TP Variation from the Daily Mean Month with Daylight hours.jpeg"
 
 # Weather effects on TP ---------------------------------------------------
 
+RPAs_with_Flow_Stage_Weather %>% group_by(`Max Daily Evap`) %>% summarise(n=n())
+
 #Instantanious Rain effect on TP Variation from the Daily Mean by Station
 ggplot(RPAs_with_Flow_Stage_Weather,aes(`Rain S7`,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+theme_bw()+geom_smooth(na.rm=TRUE)+
 scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
@@ -362,6 +474,28 @@ scale_x_continuous(limits = c(0,.12),breaks = seq(0,.12,.01))+
 labs(title="Rain Effects Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Rain")
 
 ggsave("Figures/Rain Effects Variation from Daily Mean by Hour.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Effect of  daily average Rain on diel P medians
+ggplot(filter(RPAs_with_Flow_Stage_Weather,!is.na(`Rainy Day`)),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Rainy Day`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Hourly Deviation from Daily Median by Maximum Rainfall During Day",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly Deviation from Daily Median by Maximum Rainfall During Day.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+#Effect of  daily Rainfall on diel P medians
+ggplot(filter(RPAs_with_Flow_Stage_Weather,!is.na(`Daily Rainfall Range`)),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Daily Rainfall Range`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Hourly Deviation from Daily Median by Rainfall",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly Deviation from Daily Median by Rainfall.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+Combined_Weather %>% group_by(`Daily Rainfall Range`) %>% summarise(n=n()/1440)
 
 #Instantainous Rain effect on TP Variation from the Daily Mean by Station boxplots
 ggplot(RPAs_with_Flow_Stage_Weather,aes(as.factor(`Rain S7`),Diff_24_hour_mean,color=Station))+geom_boxplot()+theme_bw()+
@@ -393,6 +527,16 @@ labs(title="Max Daily Evaporation Effect on Diel P",y="TPO4 Deviation from daily
 
 ggsave("Figures/Max Daily Evaporation Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+#Effect of  daily median evaporation on diel P medians
+ggplot(filter(RPAs_with_Flow_Stage_Weather,!is.na(`Max Daily Evap`)),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Max Daily Evap`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Hourly Deviation from Daily Median by Maximum Daily Evaporation",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Hourly Deviation from Daily Median by Max Daily Evaporation.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
 #Wind effect on TP Variation from the Daily Mean by Station 
 ggplot(RPAs_with_Flow_Stage_Weather,aes(`WIND BELLEGLADE`,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
 scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=1)+
@@ -408,6 +552,16 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Max Daily Wind Effect on Diel P",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Max Daily Wind Effect on Diel P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Effect of max daily Wind on diel P medians
+ggplot(filter(RPAs_with_Flow_Stage_Weather,!is.na(`Max Daily Wind`)),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Max Daily Wind`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+labs(title="Hourly Deviation from Daily Median by Maximum Daily Wind Speed",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+ggsave("Figures/Max Daily Wind Effect on Diel P Medians.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 
 # Stage Analysis ----------------------------------------------------------
@@ -556,7 +710,6 @@ labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Date")
 #Strong linear realtionships fror the flowways in STA-3/4
 ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,!is.na(`Inflow TP`)),aes(`Inflow TP`,TPO4,color=Flowway))+geom_point(shape=1)+geom_smooth(method="lm")+
 stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right",formula =y~x, parse = TRUE, size = 3)+theme_bw()+labs(y="Outflow TP (ug/L)",x="Inflow TP (ug/L)")
-
 
 # closest gate analysis (needs work) ---------------------------------------------------
 
