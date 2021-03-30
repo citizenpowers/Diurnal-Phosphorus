@@ -97,9 +97,9 @@ gather("Station","Flow",G381,G379,G334,G333,G380,G377) %>%
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G377"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G333"~"STA-2 Central")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G377"~"Inflow",`Station`=="G381"~"Outflow",`Station`=="G333"~"Inflow",`Station`=="G380"~"Inflow"))  %>%     #Add flowpath position
 mutate(`Outflow` = case_when(`Flowway` == "STA-2 Central" & `Flowpath Region`=="Outflow" ~Flow,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Outflow"~Flow,`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Outflow"~Flow)) %>% 
-mutate(`Outflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Outflow"~Flow/2087,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Outflow"~Flow/2375,`Flowway` == "STA-2 Central" & `Flowpath Region`=="Outflow" ~Flow/2400)) %>%
+mutate(`Outflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Outflow"~Flow/4558,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Outflow"~Flow/5421,`Flowway` == "STA-2 Central" & `Flowpath Region`=="Outflow" ~Flow/2296)) %>%
 mutate(`Inflow` = case_when(`Flowway` == "STA-2 Central"  & `Flowpath Region`=="Inflow" ~Flow,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Inflow"~Flow,`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Inflow"~Flow))  %>%
-mutate(`Inflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Inflow"~Flow/2087,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Inflow"~Flow/2375,`Flowway` == "STA-2 Central" & `Flowpath Region`=="Inflow" ~Flow/2400)) %>%
+mutate(`Inflow HLR` = case_when(`Flowway` == "STA-3/4 Western" & `Flowpath Region`=="Inflow"~Flow/4558,`Flowway` == "STA-3/4 Central" & `Flowpath Region`=="Inflow"~Flow/5421,`Flowway` == "STA-2 Central" & `Flowpath Region`=="Inflow" ~Flow/2296)) %>%
 mutate(Date=as.Date(date)) %>%
 mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
 group_by(`Flowway`,Date,Hour) %>%
@@ -196,7 +196,7 @@ mutate(`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_medi
 
 write.csv(RPAs_Sorted_outliers_removed, "Data/RPAs Sorted outliers removed.csv",row.names=FALSE)
 
-# Step 2: Create categories for TP concentration --------------------------
+# Step 3: Create categories for TP concentration --------------------------
 RPAs_Sorted_concentration <- RPAs_Sorted %>%
 mutate(`Concentration Range` = case_when(between(`24_hour_median`,0,10)~"0-10",
                                          between(`24_hour_median`,10,20)~"10-20",
@@ -371,7 +371,9 @@ mutate(`Outflow Category` = as.factor(case_when( between(Outflow,0,1) ~ "0-1 (cf
 mutate(`Inflow Category` = as.factor(case_when( between(Inflow,0,1) ~ "0-1 (cfs)",between(Inflow,1,500) ~ "1-500 (cfs)",between(Inflow,500,1000) ~ "500-1000 (cfs)", Inflow>1000 ~ "1000+ (cfs)", Inflow < 0 ~ "Reverse Flow"))) %>%
 mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-1 (cfs)","1-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
 mutate(`Outflow HLR Category` = as.factor(case_when( between(`Outflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Outflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Outflow HLR`,10,20) ~ "10-20 (cm/day)",`Outflow HLR`>20 ~ "20+ (cm/day)", `Outflow HLR`<0 ~ "Reverse Flow"))) %>%
-mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) 
+mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) %>%
+mutate(`Inflow HLR Category` = as.factor(case_when( between(`Inflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Inflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Inflow HLR`,10,20) ~ "10-20 (cm/day)",`Inflow HLR`>20 ~ "20+ (cm/day)", `Inflow HLR`<0 ~ "Reverse Flow"))) %>%
+mutate(`Inflow HLR Category`=factor(`Inflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) 
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
