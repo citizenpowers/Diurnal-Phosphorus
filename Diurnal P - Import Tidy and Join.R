@@ -271,8 +271,22 @@ group_by(Date,Hour,Station) %>%
 summarise(`Avg Hourly Temp`=mean(Temp,na.rm = TRUE),`Avg Hourly SpCond`=mean(`SpCond`,na.rm = TRUE),`Avg Hourly DO`=mean(`DO Conc`,na.rm = TRUE),`Avg Hourly pH`=mean(pH,na.rm = TRUE)) %>%
 group_by(Date,Station) %>%
 mutate(Temp_Diff_24_hour_mean=`Avg Hourly Temp`-mean(`Avg Hourly Temp`),SpCond_Diff_24_hour_mean=`Avg Hourly SpCond`-mean(`Avg Hourly SpCond`),
-DO_Diff_24_hour_mean=`Avg Hourly DO`-mean(`Avg Hourly DO`),pH_Diff_24_hour_mean=`Avg Hourly pH`-mean(`Avg Hourly pH`)) 
-  
+DO_Diff_24_hour_mean=`Avg Hourly DO`-mean(`Avg Hourly DO`),pH_Diff_24_hour_mean=`Avg Hourly pH`-mean(`Avg Hourly pH`),
+`DO Percent Diff from 24 mean`=DO_Diff_24_hour_mean/mean(`Avg Hourly DO`)*100,`pH Percent Diff from 24 mean`=pH_Diff_24_hour_mean/mean(`Avg Hourly pH`)*100,
+`SpCond Percent Diff from 24 mean`=SpCond_Diff_24_hour_mean/mean(`Avg Hourly SpCond`)*100,`Temp Percent Diff from 24 mean`=Temp_Diff_24_hour_mean/mean(`Avg Hourly Temp`)*100)
+
+Sonde_Tidy_medians <- SONDE_DATA  %>%
+mutate(date=mdy_hm(`Date/Time`),Date=as.Date(date),Hour=hour(date),Year=year(date),Minute=minute(date),Day=day(date)) %>%
+group_by(Date,Hour,Station) %>%
+summarise(`Avg Hourly Temp`=median(Temp,na.rm = TRUE),`Avg Hourly SpCond`=median(`SpCond`,na.rm = TRUE),`Avg Hourly DO`=median(`DO Conc`,na.rm = TRUE),`Avg Hourly pH`=median(pH,na.rm = TRUE)) %>%
+group_by(Date,Station) %>%
+mutate(Temp_Diff_24_hour_median=`Avg Hourly Temp`-median(`Avg Hourly Temp`),SpCond_Diff_24_hour_median=`Avg Hourly SpCond`-median(`Avg Hourly SpCond`),
+        DO_Diff_24_hour_median=`Avg Hourly DO`-median(`Avg Hourly DO`),pH_Diff_24_hour_median=`Avg Hourly pH`-median(`Avg Hourly pH`),
+        `DO Percent Diff from 24 median`=DO_Diff_24_hour_median/median(`Avg Hourly DO`)*100,`pH Percent Diff from 24 median`=pH_Diff_24_hour_median/median(`Avg Hourly pH`)*100,
+        `SpCond Percent Diff from 24 median`=SpCond_Diff_24_hour_median/median(`Avg Hourly SpCond`)*100,`Temp Percent Diff from 24 median`=Temp_Diff_24_hour_median/median(`Avg Hourly Temp`)*100)
+
+
+
   
 # Step 6: Import and Tidy Weather Data ------------------------------------
 
@@ -403,6 +417,12 @@ RPAs_with_Flow_Stage_Weather_Sonde <- RPAs_with_Flow_Stage_Weather %>%
 left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))
 
 write.csv(RPAs_with_Flow_Stage_Weather_Sonde, "Data/RPA and Flow Stage Weather Sonde.csv",row.names=FALSE)
+
+RPAs_with_Flow_Stage_Weather_Sonde_medians <- RPAs_with_Flow_Stage_Weather %>%   #calculates physicochemical paramters as medians instaed of means
+left_join(Sonde_Tidy_medians ,by=c("Date","Hour","Station"))
+
+write.csv(RPAs_with_Flow_Stage_Weather_Sonde_medians, "Data/RPA and Flow Stage Weather Sonde medians.csv",row.names=FALSE)
+
 
 # Step 11: Join with Inflow compliance TP Data ------------------------------------------
 RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- RPAs_with_Flow_Stage_Weather_Sonde %>%

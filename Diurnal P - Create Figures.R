@@ -665,19 +665,27 @@ ggsave("Figures/Change in Inflow Stage Effect on Diel P from days of over 1 inch
 
 # Sonde Analysis ----------------------------------------------------------
 
-Sonde_only <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,`Temp_Diff_24_hour_mean`:`pH_Diff_24_hour_mean`,names_to="Parameter",values_to="Value"),is.finite(Value)) %>%
+Sonde_only_differneces_absolute <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde,`Temp_Diff_24_hour_mean`:`pH_Diff_24_hour_mean`,names_to="Parameter",values_to="Value"),is.finite(Value)) %>%
 mutate(`Parameter Labels` = case_when(Parameter=="Temp_Diff_24_hour_mean"~paste0("Temperature C",intToUtf8(176)),
                                       Parameter=="SpCond_Diff_24_hour_mean"~paste0("Specific Conductivity (",intToUtf8(956),"g L",intToUtf8(8315),intToUtf8(185),")"),
                                       Parameter=="DO_Diff_24_hour_mean"~paste0("Dissolved Oxygen (mg L",intToUtf8(8315),intToUtf8(185),")"),
                                       Parameter=="pH_Diff_24_hour_mean"~"pH"))  
-        
+  
+Sonde_only_percent_diff <- filter(pivot_longer(RPAs_with_Flow_Stage_Weather_Sonde_medians,`DO Percent Diff from 24 median`:`Temp Percent Diff from 24 median`,names_to="Parameter",values_to="Value"),is.finite(Value)) %>%
+mutate(`Parameter Labels` = case_when(Parameter=="Temp Percent Diff from 24 median"~paste0("Temperature C",intToUtf8(176)),
+                                        Parameter=="SpCond Percent Diff from 24 median"~paste0("Specific Conductivity (",intToUtf8(956),"g L",intToUtf8(8315),intToUtf8(185),")"),
+                                        Parameter=="DO Percent Diff from 24 median"~paste0("Dissolved Oxygen (mg L",intToUtf8(8315),intToUtf8(185),")"),
+                                        Parameter=="pH Percent Diff from 24 median"~"pH"))        
            
 #Sonde parameters over time
-ggplot(Sonde_only,aes(Date,Value,color=Station))+
+ggplot(Sonde_only_differneces_absolute,aes(Date,Value,color=Station))+
 geom_point()+theme_bw()+facet_wrap(~Parameter,scales = "free")
 
-#Diel varaiation Sonde and TPO4
-ggplot(Sonde_only,aes(Time,Value))+geom_point(shape=21,fill="#fdb462",color="#fdb462",size=2,alpha=.5)+
+Sonde_only_differneces_absolute %>% distinct(Station,Date) %>% summarise(n=n())
+
+
+#Diel varaiation Sonde and TPO4 natural units
+ggplot(Sonde_only_differneces_absolute,aes(Time,Value))+geom_point(shape=21,fill="#fdb462",color="#fdb462",size=2,alpha=.5)+
 geom_point(aes(Time,Diff_24_hour_median),fill="#bebada",color="#bebada",shape=21,size=2,alpha=.5)+
 geom_smooth(aes(Time,Diff_24_hour_median), method="loess",color="purple",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
 geom_smooth(method="loess",color="dark orange",fill="grey",method.args = list(family = "symmetric",degree=2))+
@@ -690,20 +698,63 @@ labs(title="Physicochemical and Diel Phosphorus Patterns",x="Hour",y="TPO4 Devia
 
 ggsave("Figures/Physicochemical Patterns compared to Diel Phosphorus Pattern.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-
-scale_y_continuous(breaks = seq(-10,10,1))coord_cartesian(ylim = c(-10,10))+
 #Sonde 
-ggplot(Sonde_only,aes(Value,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+facet_wrap(~Parameter,scales = "free")+geom_smooth(method="lm")+
+ggplot(Sonde_only_differneces_absolute,aes(Value,Diff_24_hour_mean,color=Station))+geom_point()+theme_bw()+facet_wrap(~Parameter,scales = "free")+geom_smooth(method="lm")+
 scale_y_continuous(limits = c(-5,5),breaks = seq(-5,5,1))+scale_colour_brewer( type = "qual", palette = "Set2")+
 labs(title="Sonde Parameters vs Deviation in Daily P",y="TPO4 Deviation from daily median (ug/L)",x="Value")
 
 ggsave("Figures/Sonde Parameters vs Deviation in Daily P.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 
+#Diel varaiation Sonde and TPO4 percent difference pH only
+ggplot(filter(Sonde_only_percent_diff,Parameter=="pH Percent Diff from 24 median"),aes(Time,Value/100, color=Station))+geom_point(shape=21,fill="#fdb462",color="#fdb462",size=2,alpha=.5)+
+geom_point(aes(Time,`Percent difference from daily median`/100),fill="#bebada",color="#bebada",shape=21,size=2,alpha=.5)+
+geom_smooth(aes(Time,`Percent difference from daily median`/100), method="loess",color="purple",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+geom_smooth(method="loess",color="dark orange",fill="grey",method.args = list(family = "symmetric",degree=2))+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+scale_y_continuous(breaks = pretty_breaks(n=5),labels = scales::percent)+coord_cartesian(ylim = c(-.10,.10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(x="Hour",y="Deviation from Daily Median (%)")
+
+ggsave("Figures/Diel Patterns in pH and Phosphorus.jpeg", plot = last_plot(), width = 3.5, height = 3, units = "in", dpi = 300, limitsize = TRUE)
+
+#Diel varaiation Sonde and TPO4 percent difference SPCOnd only
+ggplot(filter(Sonde_only_percent_diff,Parameter=="SpCond Percent Diff from 24 median"),aes(Time,Value/100, color=Station))+geom_point(shape=21,fill="#fdb462",color="#fdb462",size=2,alpha=.5)+
+geom_point(aes(Time,`Percent difference from daily median`/100),fill="#bebada",color="#bebada",shape=21,size=2,alpha=.5)+
+geom_smooth(aes(Time,`Percent difference from daily median`/100), method="loess",color="purple",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+geom_smooth(method="loess",color="dark orange",fill="grey",method.args = list(family = "symmetric",degree=2))+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+scale_y_continuous(breaks = pretty_breaks(n=5),labels = scales::percent)+coord_cartesian(ylim = c(-.10,.10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(x="Hour",y="Deviation from Daily Median (%)")
+
+ggsave("Figures/Diel Patterns in SpCOND and Phosphorus.jpeg", plot = last_plot(), width = 3.5, height = 3, units = "in", dpi = 300, limitsize = TRUE)
+
+
+#Diel varaiation Sonde and TPO4 percent difference TEMP only
+ggplot(filter(Sonde_only_percent_diff,Parameter=="Temp Percent Diff from 24 median"),aes(Time,Value/100, color=Station))+geom_point(shape=21,fill="#fdb462",color="#fdb462",size=2,alpha=.5)+
+geom_point(aes(Time,`Percent difference from daily median`/100),fill="#bebada",color="#bebada",shape=21,size=2,alpha=.5)+
+geom_smooth(aes(Time,`Percent difference from daily median`/100), method="loess",color="purple",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+geom_smooth(method="loess",color="dark orange",fill="grey",method.args = list(family = "symmetric",degree=2))+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+scale_y_continuous(breaks = pretty_breaks(n=5),labels = scales::percent)+coord_cartesian(ylim = c(-.15,.15))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(x="Hour",y="Deviation from Daily Median (%)")
+
+ggsave("Figures/Diel Patterns in Temperature and Phosphorus.jpeg", plot = last_plot(), width = 3.5, height = 3, units = "in", dpi = 300, limitsize = TRUE)
+
+
+#Diel varaiation Sonde and TPO4 percent difference DO only
+ggplot(filter(Sonde_only_percent_diff,Parameter=="DO Percent Diff from 24 median"),aes(Time,Value/100, color=Station))+geom_point(shape=21,fill="#fdb462",color="#fdb462",size=2,alpha=.5)+
+geom_point(aes(Time,`Percent difference from daily median`/100),fill="#bebada",color="#bebada",shape=21,size=2,alpha=.5)+
+geom_smooth(aes(Time,`Percent difference from daily median`/100), method="loess",color="purple",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+geom_smooth(method="loess",color="dark orange",fill="grey",method.args = list(family = "symmetric",degree=2))+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+scale_y_continuous(breaks = pretty_breaks(n=5),labels = scales::percent)+coord_cartesian(ylim = c(-1,1.5))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(x="Hour",y="Deviation from Daily Median (%)")
+
+ggsave("Figures/Diel Patterns in Dissolved Oxygen and Phosphorus.jpeg", plot = last_plot(), width = 3.5, height = 3, units = "in", dpi = 300, limitsize = TRUE)
+
 
 
 # Percent Flow by hour ----------------------------------------------------
-
 
 #percentage of flow by hour
 Total_Flow_Hour<- Combined_BK_Flow %>%

@@ -24,7 +24,7 @@ RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather 
 
 
 
-# G334 TP Load scenarios----------------------------------------------------
+# G334 continouos TP Load scenarios----------------------------------------------------
 
 G334_TP_Load_Scenarios <- Combined_BK_Flow  %>%
 filter(Date > "2016-02-07", Station=="G334") %>%   #filter to days with continous RPA data at station G334 
