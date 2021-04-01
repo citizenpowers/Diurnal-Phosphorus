@@ -23,116 +23,53 @@ Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Flow 
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv")
 
 
-
 # G334 continouos TP Load scenarios----------------------------------------------------
 
-G334_TP_Load_Scenarios <- Combined_BK_Flow  %>%
-filter(Date > "2016-02-07", Station=="G334") %>%   #filter to days with continous RPA data at station G334 
-left_join(select(RPAs_Sorted,2:10) , by= c("Station","Date", "Hour")) %>%     #join RPA data
+Days_with_TPO4 <- RPAs_Sorted %>%
+filter(`Flowpath Region`=="Outflow") %>%  
+group_by(`Flowway`,Date) %>%
+summarize(`Has Sample`=sum(!is.na(TPO4))) %>%
+filter(`Has Sample`>0)
+
+Outflow_TP_Load_Scenarios <- Combined_BK_Flow  %>%
+#filter(Date > "2016-02-07", Station=="G334") %>%   #filter to days with continous RPA data at station G334 
+#left_join(select(RPAs_Sorted,2:10) , by= c("Station","Date", "Hour")) %>%     #join RPA data
+left_join(filter(select(RPAs_Sorted,2:13),`Flowpath Region`=="Outflow") ,by=c("Date","Hour","Flowway")) %>% 
+group_by(Flowway)  %>%
 mutate(`Date_Time`=ymd_hms(ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York")),`TP interpolated`=TPO4) %>%   #create hourly date time index
+#mutate(`Date_Time`=ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York"),`TP interpolated`=TPO4) %>%   #create hourly date time index
 mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                
-mutate(`Hourly TP LOAD`=if_else(is.finite(Flow),`TP interpolated`/1000*Flow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Flow Lagged 12 hours`=if_else(is.finite(lag(Flow,12)),lag(Flow,12),0),`Hourly TP Load Lagged 12 hours`=`TP interpolated`/1000*`Flow Lagged 12 hours`*3600*28.31/1000000) %>%
+mutate(`Hourly TP LOAD`=if_else(is.finite(Outflow),`TP interpolated`/1000*Outflow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
+mutate(`Outflow Lagged 12 hours`=if_else(is.finite(lag(Outflow,12)),lag(Outflow,12),0),`Hourly TP Load Lagged 12 hours`=`TP interpolated`/1000*`Outflow Lagged 12 hours`*3600*28.31/1000000) %>%
 filter(is.finite(`TP interpolated`))   %>%
-group_by(Date) %>%
-mutate(`Flow 50% Day`=mean(Flow,na.rm=TRUE)) %>%
-mutate(`Flow 66% Day`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*1.33,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*.66)) %>%
-mutate(`Flow 66% Night`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*.66,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*1.33)) %>%
-mutate(`Flow 100% Night`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*0,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*2)) %>%
-mutate(`Flow 100% Day`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*2,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*0)) %>%
-mutate(`P Load`=if_else(is.finite(Flow),`TP interpolated`/1000*Flow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Flow 50% Day Load`=`TP interpolated`/1000*`Flow 50% Day`*3600*28.31/1000000) %>%  
-mutate(`Flow 66% Day Load`=`TP interpolated`/1000*`Flow 66% Day`*3600*28.31/1000000) %>% 
-mutate(`Flow 66% Night Load`=`TP interpolated`/1000*`Flow 66% Night`*3600*28.31/1000000) %>%
-mutate(`Flow 100% Night Load`=`TP interpolated`/1000*`Flow 100% Night`*3600*28.31/1000000) %>%
-mutate(`Flow 100% Day Load`=`TP interpolated`/1000*`Flow 100% Day`*3600*28.31/1000000) %>%
-ungroup() %>%  
+semi_join(Days_with_TPO4,by=c("Date","Flowway")) %>%
+group_by(Flowway,Date) %>%
+mutate(`Outflow 50% Day`=mean(Outflow,na.rm=TRUE)) %>%
+mutate(`Outflow 66% Day`=case_when(between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*1.33,!between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*.66)) %>%
+mutate(`Outflow 66% Night`=case_when(between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*.66,!between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*1.33)) %>%
+mutate(`Outflow 100% Night`=case_when(between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*0,!between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*2)) %>%
+mutate(`Outflow 100% Day`=case_when(between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*2,!between(Hour,8,20)~mean(Outflow,na.rm=TRUE)*0)) %>%
+mutate(`P Load`=if_else(is.finite(Outflow),`TP interpolated`/1000*Outflow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
+mutate(`Outflow 50% Day Load`=`TP interpolated`/1000*`Outflow 50% Day`*3600*28.31/1000000) %>%  
+mutate(`Outflow 66% Day Load`=`TP interpolated`/1000*`Outflow 66% Day`*3600*28.31/1000000) %>% 
+mutate(`Outflow 66% Night Load`=`TP interpolated`/1000*`Outflow 66% Night`*3600*28.31/1000000) %>%
+mutate(`Outflow 100% Night Load`=`TP interpolated`/1000*`Outflow 100% Night`*3600*28.31/1000000) %>%
+mutate(`Outflow 100% Day Load`=`TP interpolated`/1000*`Outflow 100% Day`*3600*28.31/1000000) %>%
+group_by(Flowway) %>%
 mutate(`Cumulative P Load`=cumsum(`P Load`)) %>%
-mutate(`Cumulative P Load 50% Day`=cumsum(`Flow 50% Day Load`)) %>%
-mutate(`Cumulative P Load 66% Day`=cumsum(`Flow 66% Day Load`)) %>%
-mutate(`Cumulative P Load 66% Night`=cumsum(`Flow 66% Night Load`)) %>%
-mutate(`Cumulative P Load 100% Night`=cumsum(`Flow 100% Night Load`)) %>%
-mutate(`Cumulative P Load 100% Day`=cumsum(`Flow 100% Day Load`))  %>%
-pivot_longer(29:34,names_to = "Scenario", values_to = "Value")
-
-G379_TP_Load_Scenarios <- Combined_BK_Flow  %>%
-filter(Date > "2014-02-23", Station=="G379") %>%   #filter to days with continous RPA data at station G379 
-left_join(select(RPAs_Sorted,2:10) , by= c("Station","Date", "Hour")) %>%     #join RPA data
-mutate(`Date_Time`=ymd_hms(ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York")),`TP interpolated`=TPO4) %>%   #create hourly date time index
-mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                
-mutate(`Hourly TP LOAD`=if_else(is.finite(Flow),`TP interpolated`/1000*Flow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Flow Lagged 12 hours`=if_else(is.finite(lag(Flow,12)),lag(Flow,12),0),`Hourly TP Load Lagged 12 hours`=`TP interpolated`/1000*`Flow Lagged 12 hours`*3600*28.31/1000000) %>%
-filter(is.finite(`TP interpolated`))   %>%
-group_by(Date) %>%
-mutate(`Flow 50% Day`=mean(Flow,na.rm=TRUE)) %>%
-mutate(`Flow 66% Day`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*1.33,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*.66)) %>%
-mutate(`Flow 66% Night`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*.66,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*1.33)) %>%
-mutate(`Flow 100% Night`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*0,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*2)) %>%
-mutate(`Flow 100% Day`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*2,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*0)) %>%
-mutate(`P Load`=if_else(is.finite(Flow),`TP interpolated`/1000*Flow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Flow 50% Day Load`=`TP interpolated`/1000*`Flow 50% Day`*3600*28.31/1000000) %>%
-mutate(`Flow 66% Day Load`=`TP interpolated`/1000*`Flow 66% Day`*3600*28.31/1000000) %>% 
-mutate(`Flow 66% Night Load`=`TP interpolated`/1000*`Flow 66% Night`*3600*28.31/1000000) %>%
-mutate(`Flow 100% Night Load`=`TP interpolated`/1000*`Flow 100% Night`*3600*28.31/1000000) %>%
-mutate(`Flow 100% Day Load`=`TP interpolated`/1000*`Flow 100% Day`*3600*28.31/1000000) %>%
-ungroup() %>%  
-mutate(`Cumulative P Load`=cumsum(`P Load`)) %>%
-mutate(`Cumulative P Load 50% Day`=cumsum(`Flow 50% Day Load`)) %>%
-mutate(`Cumulative P Load 66% Day`=cumsum(`Flow 66% Day Load`)) %>%
-mutate(`Cumulative P Load 66% Night`=cumsum(`Flow 66% Night Load`)) %>%
-mutate(`Cumulative P Load 100% Night`=cumsum(`Flow 100% Night Load`)) %>%
-mutate(`Cumulative P Load 100% Day`=cumsum(`Flow 100% Day Load`))  %>%
-pivot_longer(29:34,names_to = "Scenario", values_to = "Value")
-
-G381_TP_Load_Scenarios <- Combined_BK_Flow  %>%
-filter(Date > "2014-02-23", Station=="G381") %>%   #filter to days with continous RPA data at station G381 
-left_join(select(RPAs_Sorted,2:10) , by= c("Station","Date", "Hour")) %>%     #join RPA data
-mutate(`Date_Time`=ymd_hms(ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York")),`TP interpolated`=TPO4) %>%   #create hourly date time index
-mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                
-mutate(`Hourly TP LOAD`=if_else(is.finite(Flow),`TP interpolated`/1000*Flow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Flow Lagged 12 hours`=if_else(is.finite(lag(Flow,12)),lag(Flow,12),0),`Hourly TP Load Lagged 12 hours`=`TP interpolated`/1000*`Flow Lagged 12 hours`*3600*28.31/1000000) %>%
-filter(is.finite(`TP interpolated`))   %>%
-group_by(Date) %>%
-mutate(`Flow 50% Day`=mean(Flow,na.rm=TRUE)) %>%
-mutate(`Flow 66% Day`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*1.33,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*.66)) %>%
-mutate(`Flow 66% Night`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*.66,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*1.33)) %>%
-mutate(`Flow 100% Night`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*0,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*2)) %>%
-mutate(`Flow 100% Day`=case_when(between(Hour,8,20)~mean(Flow,na.rm=TRUE)*2,!between(Hour,8,20)~mean(Flow,na.rm=TRUE)*0)) %>%
-mutate(`P Load`=if_else(is.finite(Flow),`TP interpolated`/1000*Flow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Flow 50% Day Load`=`TP interpolated`/1000*`Flow 50% Day`*3600*28.31/1000000) %>%
-mutate(`Flow 66% Day Load`=`TP interpolated`/1000*`Flow 66% Day`*3600*28.31/1000000) %>% 
-mutate(`Flow 66% Night Load`=`TP interpolated`/1000*`Flow 66% Night`*3600*28.31/1000000) %>%
-mutate(`Flow 100% Night Load`=`TP interpolated`/1000*`Flow 100% Night`*3600*28.31/1000000) %>%
-mutate(`Flow 100% Day Load`=`TP interpolated`/1000*`Flow 100% Day`*3600*28.31/1000000) %>%
-ungroup() %>%  
-mutate(`Cumulative P Load`=cumsum(`P Load`)) %>%
-mutate(`Cumulative P Load 50% Day`=cumsum(`Flow 50% Day Load`)) %>%
-mutate(`Cumulative P Load 66% Day`=cumsum(`Flow 66% Day Load`)) %>%
-mutate(`Cumulative P Load 66% Night`=cumsum(`Flow 66% Night Load`)) %>%
-mutate(`Cumulative P Load 100% Night`=cumsum(`Flow 100% Night Load`)) %>%
-mutate(`Cumulative P Load 100% Day`=cumsum(`Flow 100% Day Load`))  %>%
-pivot_longer(29:34,names_to = "Scenario", values_to = "Value")
-
-
+mutate(`Cumulative P Load 50% Day`=cumsum(`Outflow 50% Day Load`)) %>%
+mutate(`Cumulative P Load 66% Day`=cumsum(`Outflow 66% Day Load`)) %>%
+mutate(`Cumulative P Load 66% Night`=cumsum(`Outflow 66% Night Load`)) %>%
+mutate(`Cumulative P Load 100% Night`=cumsum(`Outflow 100% Night Load`)) %>%
+mutate(`Cumulative P Load 100% Day`=cumsum(`Outflow 100% Day Load`))  %>%
+pivot_longer(`Cumulative P Load`:`Cumulative P Load 100% Day`,names_to = "Scenario", values_to = "Value")
 
 # Figures -----------------------------------------------------------------
-ggplot(G381_TP_Load_Scenarios,aes(Date_Time,`Value`,color=Scenario,linetype=Scenario))+geom_line(size=.75,alpha=.8)+theme_bw()+
+ggplot(Outflow_TP_Load_Scenarios,aes(Date_Time,`Value`,color=Scenario,linetype=Scenario))+geom_point(shape=3)+theme_bw()+facet_wrap(vars(Flowway))+
 scale_y_continuous(breaks=pretty_breaks(n=10),label=comma)+scale_x_datetime(breaks = "3 month", date_labels = "%b %y")+scale_color_viridis( discrete = TRUE,option="D")+
-labs(title = "G381 P Load Scenarios",y="Total Phosphorus (kg)",x="Date",caption = "")+theme(legend.position = "bottom")
+labs(title = "P Load Scenarios at Outflows",y="Total Phosphorus (kg)",x="Date",caption = "")+theme(legend.position = "bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
-ggsave("Figures/G381 P Load Scenarios.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Outflow P Load Scenarios.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-
-ggplot(G334_TP_Load_Scenarios,aes(Date_Time,`Value`,color=Scenario,linetype=Scenario))+geom_line(size=.75,alpha=.8)+theme_bw()+
-scale_y_continuous(breaks=pretty_breaks(n=10),label=comma)+scale_x_datetime(breaks = "3 month", date_labels = "%b %y")+scale_color_viridis( discrete = TRUE,option="D")+
-labs(title = "G334 P Load Scenarios",y="Total Phosphorus (kg)",x="Date",caption = "")+theme(legend.position = "bottom")
-
-ggsave("Figures/G334 P Load Scenarios.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
-
-ggplot(G379_TP_Load_Scenarios,aes(Date_Time,`Value`,color=Scenario,linetype=Scenario))+geom_line(size=.75,alpha=.8)+theme_bw()+
-scale_y_continuous(breaks=pretty_breaks(n=10),label=comma)+scale_x_datetime(breaks = "3 month", date_labels = "%b %y")+scale_color_viridis( discrete = TRUE,option="D")+
-labs(title = "G379 P Load Scenarios",y="Total Phosphorus (kg)",x="Date",caption = "")+theme(legend.position = "bottom")
-
-ggsave("Figures/G379 P Load Scenarios.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 

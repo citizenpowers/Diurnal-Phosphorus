@@ -59,7 +59,7 @@ ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, 
 ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
 
 date_range_summary <- RPAs_Sorted %>%
-filter(Date<"2017-01-01") %>%  
+filter(Date>"2014-01-01") %>%  
 group_by(Station) %>%
 summarise(n=n(),min=min(Date),max=max(Date))
 
@@ -402,6 +402,13 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Hourly Deviation from Daily Median by Outflow Hydraulic Loading Rate",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow HLR- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Median by category from days of stable flow at inflow and outflow 
+ggplot(filter(RPAs_with_Flow_Complete_Days,`Outflow Category`!="Reverse Flow",`Continuous OutFlow`==TRUE,`Continuous InFlow`==TRUE) ,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Inflow HLR Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Outflow Hydraulic Loading Rate",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
 
 #table with number of days in each HLR catagory
 
