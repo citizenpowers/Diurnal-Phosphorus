@@ -59,16 +59,17 @@ ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, 
 ggplot(RPAs_Sorted,aes(Date,Hour,color=Station))+geom_point()+facet_wrap(~Station,ncol = 3)+theme_bw()+scale_y_continuous(limits = c(0,24),breaks = seq(0,24,1))
 
 date_range_summary <- RPAs_Sorted %>%
-filter(Date>"2014-01-01") %>%  
-group_by(Station) %>%
-summarise(n=n(),min=min(Date),max=max(Date))
+#filter(Date>"2014-01-01") %>%  
+group_by(Station,Date) %>%
+summarise(n=n(),min=min(Date),max=max(Date),`Number of samples`=sum(!is.na(TPO4))) 
+  
+  
+days_of_samples <- RPAs_Sorted %>%
+group_by(Station,Date) %>%
+summarise(`Number of samples`=sum(!is.na(TPO4))) %>%  
+filter(`Number of samples`>0)  %>%
+summarise(n=n())
 
-RPA_summary <-RPAs_Sorted %>%
-mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
-group_by(Hour,Station) %>%
-summarise(`Number of Observations`=sum(!is.na(TPO4)),`Total missing data`=sum(is.na(TPO4)),n=n()) %>% 
-mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) %>%
-gather("Data Type","Value",3:4)
 
 #histogram of median TP concentrations 
 ggplot(RPAs_Sorted,aes(`24_hour_median`))+geom_histogram()+facet_wrap(~Station,scales="free")+theme_bw()
@@ -85,7 +86,16 @@ ggplot(RPAs_with_Flow_Stage_Weather,aes(`Rain S7 DA`))+geom_histogram(binwidth =
 scale_x_continuous(breaks = seq(0,1,.1))+coord_cartesian(xlim = c(0,1))+
 theme_bw()
 
+
+
 #missing data. Ist there a pattern in the missing data by time of day? 
+RPA_summary <-RPAs_Sorted %>%
+mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
+group_by(Hour,Station) %>%
+summarise(`Number of Observations`=sum(!is.na(TPO4)),`Total missing data`=sum(is.na(TPO4)),n=n()) %>% 
+mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) %>%
+gather("Data Type","Value",3:4)
+
 ggplot(RPA_summary,aes(Hour,Value,fill=`Data Type`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
 
 # missing data by percent 
