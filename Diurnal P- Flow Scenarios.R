@@ -68,7 +68,7 @@ write.csv(Outflow_TP_Load_Scenarios,"./Data/Outflow_TP_Load_Scenarios.csv")
 
 days_in_scenario <- Outflow_TP_Load_Scenarios %>%
 group_by(Flowway,Date) %>%
-summarise() %>%
+summarise(`has TP sample`=sum(!is.na(TPO4))) %>%
 group_by(Flowway) %>%
 summarise(n=n()) 
 

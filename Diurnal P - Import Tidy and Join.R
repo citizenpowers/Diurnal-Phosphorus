@@ -46,6 +46,7 @@ arrange(date) %>%
 mutate(G334=VALUE) %>%
 select(-STATION,-VALUE)
 
+
 #G333 stations  -STA-2 central flowway
 G333_C_BK <- read_csv("Data/G333_C_BK.csv") %>%
 select(date,STATION,VALUE) %>%
@@ -56,6 +57,12 @@ pivot_wider(names_from = STATION, values_from = VALUE) %>%
 arrange(date) %>%
 fill(`G333A-C-Q`,`G333B-C-Q`,`G333C-C-Q`,`G333D-C-Q`,`G333E-C-Q`) %>%
 mutate(G333=rowSums(.[2:6],na.rm=TRUE))
+
+OlsonNames()
+
+str(G333_C_BK)
+tz("2016-08-07 10:34:00")
+with_tz("2016-08-07 10:34:00","UTC")
 
 #G380 Stations - STA-3/4 western flowway
 G380_C_BK <- select(read_csv("Data/G380_C_BK part 1.csv"),date,STATION,VALUE) %>%
@@ -81,7 +88,7 @@ fill(`G377A-C-Q`,`G377B-C-Q`,`G377C-C-Q`,`G377D-C-Q`,`G377E-C-Q`) %>%
 mutate(G377=rowSums(.[2:6],na.rm=TRUE))          
 
 #Combined Outflow over entire flowway
-Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,10,01,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,10,01,0,0,0,tz = "UTC"),by = "min")),"date") %>%
 left_join(G381_C_BK,by="date") %>%  #combine data from G381, G334, G379D
 left_join(G379_C_BK,by="date") %>%
 left_join(G334_S_BK,by="date")  %>%
@@ -237,7 +244,7 @@ pivot_wider(names_from = STATION, values_from = VALUE) %>%
 arrange(date) %>%  
 fill(`G381B-H`,`G380B-T`) 
 
-Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,10,01,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,10,01,0,0,0,tz = "UTC"),by = "min")),"date") %>%
 full_join(STA2C3_Stage,by="date") %>%  
 full_join(STA34_central_flowway_Stage ,by="date") %>%
 full_join(STA34_western_flowway_Stage ,by="date") %>%  
@@ -311,7 +318,7 @@ BELLW_WNVS_BK_tidy <- BELLW_WNVS_BK %>%
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
 select(-date)
 
-Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "America/New_York"), to=ISOdate(2017,9,14,0,0,0,tz = "America/New_York"),by = "min")),"date") %>%
+Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,9,14,0,0,0,tz = "UTC"),by = "min")),"date") %>%
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>% 
 select(-date) %>%
 left_join(S7_R_DA,by="Date")%>%  
