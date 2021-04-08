@@ -440,7 +440,6 @@ labs(title="Hourly Deviation from Daily Median by Inflow Stage",y="TPO4 Deviatio
 
 ggsave("Figures/Hourly Deviation from Daily Median by Inflow Stage.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
-
 #Hourly diel P with Outflow Stage
 ggplot(RPAs_with_Flow_Stage,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(`Max Daily Outflow Stage`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
@@ -450,19 +449,38 @@ labs(title="Hourly Deviation from Daily Median by Outflow Stage",y="TPO4 Deviati
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Stage.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
-
-
-
 # Flow vs TP  -------------------------------------------------------------
-# TP vs inflow Outflow category 
-ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+# TP vs inflow CFS
+ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(0,200,50))+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,200))+
-#scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+geom_hline(yintercept=0)+theme(legend.position="bottom")+
+labs(title="TPO4 vs Inflow  ",y="TPO4 (ug/L)",x="Inflow (CFS)",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
+# TP vs Outflow CFS
+ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,400))+
+labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Inflow (cfs)",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+# TP vs inflow HLR
+ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow") ,aes(`Inflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+
+labs(title="TPO4 vs Inflow  ",y="TPO4 (ug/L)",x="Inflow HLR",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+# TP vs Outflow HLR
+ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(`Outflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,400))+
+labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Outflow HLR",color=NULL)
+
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 # TRP diel trend? ---------------------------------------------------------
 #Hourly TP Variation from the Daily Mean by Station
@@ -678,7 +696,7 @@ stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.
 
 ggsave("Figures/Change in Inflow Stage Effect on Diel P from days of over 1 inch Inflow stage change.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-
+with_tz("2021-05-05 12:00:00","UTC")
 
 # Sonde Analysis ----------------------------------------------------------
 
