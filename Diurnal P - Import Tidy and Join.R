@@ -46,7 +46,6 @@ arrange(date) %>%
 mutate(G334=VALUE) %>%
 select(-STATION,-VALUE)
 
-
 #G333 stations  -STA-2 central flowway
 G333_C_BK <- read_csv("Data/G333_C_BK.csv") %>%
 select(date,STATION,VALUE) %>%
@@ -57,12 +56,6 @@ pivot_wider(names_from = STATION, values_from = VALUE) %>%
 arrange(date) %>%
 fill(`G333A-C-Q`,`G333B-C-Q`,`G333C-C-Q`,`G333D-C-Q`,`G333E-C-Q`) %>%
 mutate(G333=rowSums(.[2:6],na.rm=TRUE))
-
-OlsonNames()
-
-str(G333_C_BK)
-tz("2016-08-07 10:34:00")
-with_tz("2016-08-07 10:34:00","UTC")
 
 #G380 Stations - STA-3/4 western flowway
 G380_C_BK <- select(read_csv("Data/G380_C_BK part 1.csv"),date,STATION,VALUE) %>%

@@ -852,21 +852,6 @@ labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Date")
 ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,!is.na(`Inflow TP`)),aes(`Inflow TP`,TPO4,color=Flowway))+geom_point(shape=1)+geom_smooth(method="lm")+
 stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right",formula =y~x, parse = TRUE, size = 3)+theme_bw()+labs(y="Outflow TP (ug/L)",x="Inflow TP (ug/L)")
 
-# closest gate analysis (needs work) ---------------------------------------------------
-
-
-#analysis of flow at closest gate only
-Combined_BK_Flow_closest_gate <- mutate(G381B_C_BK,date=dmy_hms(date)) %>%
-full_join(mutate(G379D_C_BK,date=mdy_hm(date))) %>%
-full_join(mutate(G334_S_BK_1,date=mdy_hm(date)))  %>%
-arrange(date) %>%  
-gather("Station","Flow",G381B,G379D,G334) %>%
-mutate(Date=as.Date(date)) %>%
-#mutate(Flow=if_else(Station=="G334",Flow,Flow)) %>%  #G334 flow/5 since it is larger structure representing larger area
-mutate(Hour=hour(round_date(date, unit = "hour"))) %>%
-group_by(Station,Date,Hour) %>%
-summarise(Flow=mean(Flow,na.rm = TRUE))
-
 
 
 
