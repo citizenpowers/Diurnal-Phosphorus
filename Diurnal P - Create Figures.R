@@ -338,38 +338,45 @@ summarise(`Day of continuous inflow`=sum(`Continuous InFlow`),`Day of continuous
 
 #Hourly TP Variation from the Daily Mean by Station and outflow category
 ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE & `Continuous InFlow`==TRUE,!is.na(`Outflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-  facet_grid(Station~`Outflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-  labs(title="Variation from Daily Mean by Hour from Days with Steady outflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+facet_grid(`Outflow Category`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour from Days with Steady outflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly TP Variation from the Daily Mean by Station and Inflow category
 ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous InFlow`==TRUE,!is.na(`Inflow Category`)),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-  facet_grid(Station~`Inflow Category`)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-  labs(title="Variation from Daily Mean by Hour from Days with Steady Inflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+facet_grid(`Inflow Category`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Variation from Daily Mean by Hour from Days with Steady Inflow",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Hourly TP Variation from the Daily Mean by Station from days of steady Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Figure RPA and OUtflow Continous Days
 ggplot(RPAs_with_Flow_Complete_Days,aes(Outflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-  facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,20))+scale_colour_brewer( type = "qual", palette = "Set2")+
-  labs(title="TPO4 vs Flow by Station from Days of Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,20))+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="TPO4 vs Flow by Station from Days of Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
 
 ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Figure RPA and Intflow Continous Days
 ggplot(RPAs_with_Flow_Complete_Days,aes(Inflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
-  facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,10))+scale_colour_brewer( type = "qual", palette = "Set2")+
-  labs(title="TPO4 vs Flow by Station from Days of Continuous Inflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+facet_wrap(~Station,nrow=1,scales = "free_x")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,10))+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="TPO4 vs Flow by Station from Days of Continuous Inflow",y="TPO4 (ug/L)",x="Flow (cfs)")
 
 ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Inflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+#Figure RPA and OUtflow Continous Days
+ggplot(RPAs_with_Flow_Complete_Days,aes(Outflow,TPO4,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+facet_grid(Station~Month,scales = "free_y")+scale_y_continuous(limits=c(0,200),breaks =seq(0,200,20))+scale_colour_brewer( type = "qual", palette = "Set2")+
+labs(title="TPO4 vs Flow by Station from Days of Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+
+ggsave("Figures/PO4 vs Flow by Station from Days of Continuous Outflow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
 #Figure RPA and flow and month from days with continuous outflow
 ggplot(filter(RPAs_with_Flow_Complete_Days,`Continuous OutFlow`==TRUE,!is.na(`Outflow Category`)),aes(Hour,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(color="black")+theme_bw()+
-  facet_grid(Station~Month,scales = "free_x")+scale_y_continuous(limits=c(-10,10),breaks =seq(-10,10,2))+scale_colour_brewer( type = "qual", palette = "Set2")+
-  geom_hline(yintercept=0)+labs(title="TPO4 vs Flow by Station from Days with Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
+facet_grid(Station~Month,scales = "free_y")+scale_y_continuous(limits=c(-10,10),breaks =seq(-10,10,2))+scale_colour_brewer( type = "qual", palette = "Set2")+
+geom_hline(yintercept=0)+labs(title="TPO4 vs Flow by Station from Days with Continuous Outflow",y="TPO4 (ug/L)",x="Flow (cfs)")
 
 ggsave("Figures/TPO4 vs Flow by Station and Month from days with Continuous Outlow.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 

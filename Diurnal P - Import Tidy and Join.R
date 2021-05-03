@@ -179,9 +179,6 @@ mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`24_hour_median`=median(TPO4,na.rm=T
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,Diff_24_hour_median=TPO4-`24_hour_median`,Diff_24_hour_log_trans=log(TPO4)-`log mean`,Diff_24_hour_cube_root=(TPO4^(1/3)-`Cube root mean`)^3) %>%
 mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100,`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) 
 
-
-
-
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
 
 RPAs_Sorted_outliers_removed <- RPAs_outliers_removed %>%
@@ -378,18 +375,20 @@ Inflow_TP_Data <-G378B_tidy %>%
 
 
 # Step 8: Join Flow and RPA data and save DF --------------------------------------
+
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Date","Hour","Flowway")) %>%
 filter(is.finite(Outflow) || is.finite(Inflow)) %>%     #need inflow data
 mutate(Outflow=as.numeric(Outflow)) %>%
 mutate(Season=if_else(between(month(Date),5,11),"Wet Season","Dry Season")) %>%
-mutate(`Outflow Category` = as.factor(case_when( between(Outflow,0,1) ~ "0-1 (cfs)",between(Outflow,1,500) ~ "1-500 (cfs)",between(Outflow,500,1000) ~ "500-1000 (cfs)", Outflow>1000 ~ "1000+ (cfs)", Outflow<0 ~ "Reverse Flow"))) %>%
-mutate(`Inflow Category` = as.factor(case_when( between(Inflow,0,1) ~ "0-1 (cfs)",between(Inflow,1,500) ~ "1-500 (cfs)",between(Inflow,500,1000) ~ "500-1000 (cfs)", Inflow>1000 ~ "1000+ (cfs)", Inflow < 0 ~ "Reverse Flow"))) %>%
-mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-1 (cfs)","1-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
+mutate(`Outflow Category` = as.factor(case_when( between(Outflow,0,10) ~ "0-10 (cfs)",between(Outflow,10,500) ~ "10-500 (cfs)",between(Outflow,500,1000) ~ "500-1000 (cfs)", Outflow>1000 ~ "1000+ (cfs)", Outflow<0 ~ "Reverse Flow"))) %>%
+mutate(`Inflow Category` = as.factor(case_when( between(Inflow,0,10) ~ "0-10 (cfs)",between(Inflow,10,500) ~ "10-500 (cfs)",between(Inflow,500,1000) ~ "500-1000 (cfs)", Inflow>1000 ~ "1000+ (cfs)", Inflow < 0 ~ "Reverse Flow"))) %>%
+mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-10 (cfs)","10-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
 mutate(`Outflow HLR Category` = as.factor(case_when( between(`Outflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Outflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Outflow HLR`,10,20) ~ "10-20 (cm/day)",`Outflow HLR`>20 ~ "20+ (cm/day)", `Outflow HLR`<0 ~ "Reverse Flow"))) %>%
 mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) %>%
 mutate(`Inflow HLR Category` = as.factor(case_when( between(`Inflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Inflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Inflow HLR`,10,20) ~ "10-20 (cm/day)",`Inflow HLR`>20 ~ "20+ (cm/day)", `Inflow HLR`<0 ~ "Reverse Flow"))) %>%
 mutate(`Inflow HLR Category`=factor(`Inflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) 
+
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
