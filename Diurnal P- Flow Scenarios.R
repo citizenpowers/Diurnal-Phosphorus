@@ -117,11 +117,12 @@ theme(legend.position = "bottom",axis.text.x = element_text(angle = 90, vjust = 
 
 
 #Example flow scenario calculation
-ggplot(filter(Outflow_TP_Load_Scenarios,Date=="2014-10-14"),aes(Date_Time,`TPO4`))+geom_point(shape=21,fill="#2b8cbe",size=3)+
-geom_line(aes(Date_Time,`TP interpolated`))+
+ggplot(filter(Outflow_TP_Load_Scenarios,Date=="2014-10-14"),aes(Date_Time,`TPO4`))+
+
 geom_ribbon( aes( ymin = 0, ymax = `Outflow 66% Night`*.5 ),fill="#fdbb84" , alpha=0.6,color="black")+  
-geom_ribbon( aes( ymin = 0, ymax = `Outflow 75% between 12-4AM`*.5 ),fill="#bebada" , alpha=0.6,color="black")+    
-geom_ribbon( aes( ymin = 0, ymax = `Outflow Opposite Diel P Pattern`*.5 ),fill="#8dd3c7" , alpha=0.6,color="black")+     
+#geom_ribbon( aes( ymin = 0, ymax = `Outflow 75% between 12-4AM`*.5 ),fill="#bebada" , alpha=0.6,color="black")+    
+geom_ribbon( aes( ymin = 0, ymax = `Outflow Opposite Diel P Pattern`*.5 ),fill="#8dd3c7" , alpha=0.6,color="black")+    
+  geom_line(aes(Date_Time,`TP interpolated`))+  geom_point(shape=21,fill="#2b8cbe",size=3)+  
 facet_wrap(vars(Flowway),nrow=2,scales = "free")+
 scale_y_continuous(sec.axis = sec_axis(~ . /.5, name = "Mean Hourly CFS",breaks = pretty_breaks(5)))+
 theme_bw()+scale_x_datetime(breaks = "1 hour", date_labels = "%H:%M")+

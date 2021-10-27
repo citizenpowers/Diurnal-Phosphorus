@@ -31,7 +31,6 @@ Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date 
 
 #RPA and flow DF. 
 RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
-#mutate(`Flow Category`=factor(`Flow Category`,levels = c("Reverse Flow", "0-1 (cfs)", "1-100 (cfs)","100-250 (cfs)","250-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
 mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
 
 #RPA Flow and Stage Data
@@ -85,8 +84,6 @@ ggplot(RPAs_with_Flow,aes(`Outflow HLR`))+geom_histogram()+theme_bw()+facet_wrap
 ggplot(RPAs_with_Flow_Stage_Weather,aes(`Rain S7 DA`))+geom_histogram(binwidth = .05)+facet_wrap(~Station)+
 scale_x_continuous(breaks = seq(0,1,.1))+coord_cartesian(xlim = c(0,1))+
 theme_bw()
-
-
 
 #missing data. Ist there a pattern in the missing data by time of day? 
 RPA_summary <-RPAs_Sorted %>%
@@ -459,8 +456,8 @@ ggsave("Figures/Hourly Deviation from Daily Median by Outflow Stage.jpeg", plot 
 # Flow vs TP  -------------------------------------------------------------
 # TP vs inflow CFS
 ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway,scales="free_x")+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,200))+
 labs(title="TPO4 vs Inflow  ",y="TPO4 (ug/L)",x="Inflow (CFS)",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
@@ -468,7 +465,7 @@ ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", pl
 # TP vs Outflow CFS
 ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,400))+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,50))+
 labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Inflow (cfs)",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
@@ -476,7 +473,7 @@ ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", pl
 # TP vs inflow HLR
 ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow") ,aes(`Inflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,100))+
 labs(title="TPO4 vs Inflow  ",y="TPO4 (ug/L)",x="Inflow HLR",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
@@ -484,7 +481,7 @@ ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", pl
 # TP vs Outflow HLR
 ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(`Outflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,400))+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,100))+
 labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Outflow HLR",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
