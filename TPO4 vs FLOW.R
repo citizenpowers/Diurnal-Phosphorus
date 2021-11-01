@@ -9,6 +9,7 @@ library(tidyr)
 library(maptools)
 library(ggpmisc)
 library(e1071)
+library(ggrepel)
 
 
 # Import data -------------------------------------------------------------
@@ -29,19 +30,48 @@ All_flow_RPA1 <- read_csv("Data/Hours Since Flow.csv")
 # TPO4 vs FLOW at inflow sites --------------------------------------------
 
 RPAs_with_Flow_inflow <- RPAs_with_Flow %>%
-filter(`Flowpath Region`=="Inflow")
+filter(`Flowpath Region`=="Inflow") %>%
+filter(Outflow>2) %>%
+mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
 
 ggplot(RPAs_with_Flow_inflow ,aes(Inflow,TPO4,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
-scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,ncol=3)+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_grid(Station~Month)+
 labs(title="Inflow effect on Phosphorus",y="TPO4 (ug/L)",x="Flow (cfs)")
 
-
 RPAs_with_Flow_outflows <- RPAs_with_Flow %>%
-filter(`Flowpath Region`=="Outflow")
+#filter(`Flowpath Region`=="Outflow") %>%
+#filter(Outflow>2) %>%
+mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%
+filter(Flag ==TRUE)
+
+ggplot(RPAs_with_Flow_outflows ,aes(`Outflow HLR`,(TPO4),color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_grid(Station~Month)+coord_cartesian(ylim = c(0,100),xlim = c(0,35))+
+labs(title="",y="TPO4 (ug/L)",x="Flow (cm/day)")
 
 ggplot(RPAs_with_Flow_outflows ,aes(Outflow,TPO4,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
-scale_colour_brewer( type = "qual", palette = "Set2")+facet_grid(Station~Month)+coord_cartesian(ylim = c(0,100))+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_wrap(~Station,nrow=3)+coord_cartesian(ylim = c(0,100))+
 labs(title="Outflow effect on Phosphorus",y="TPO4 (ug/L)",x="Flow (cfs)")
+
+ggplot(Combined_BK_Flow ,aes(Date+Hour/24,Outflow,color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
+scale_colour_brewer( type = "qual", palette = "Set2")+facet_grid(Station~Month)+coord_cartesian(ylim = c(0,100))+
+labs(title="Outflows",y="Flow (cfs)",x="Date")
+
+
+
+#find outlying values
+RPAs_with_Flow_outflows_outlying <- RPAs_with_Flow_outflows%>%
+filter(Station=="G334",Month=="Jun",Date <"2017-06-01")
+
+ggplot(RPAs_with_Flow_outflows_outlying ,aes(`Outflow HLR`,(TPO4)))+geom_point(shape=21,size=3)+geom_smooth(color="black")+
+scale_colour_brewer( type = "qual", palette = "Set2")+coord_cartesian(ylim = c(0,100),xlim = c(0,35))+theme_bw()+
+labs(title="Outflow effect on Phosphorus",y="TPO4 (ug/L)",x="HLR (cm/day)")
+
+
+ggplot(RPAs_with_Flow_outflows_outlying ,aes(Date,(TPO4)))+geom_point(shape=21,size=3)+
+scale_colour_brewer( type = "qual", palette = "Set2")+theme_bw()+
+labs(title="Outflow effect on Phosphorus",y="TPO4 (ug/L)",x="HLR (cm/day)")
+
 
 
 
@@ -97,20 +127,20 @@ coord_cartesian(ylim = c(0,100))+geom_smooth(method="loess",color="black",fill="
 # Does difference from daily mean flow correlate with deviation from daily mean TP?-----------------------------------
 
 Flow_diff_24_mean <- Combined_BK_Flow %>%
-  group_by(`Flowway`,Date) %>%
-  mutate(`24_hour_mean_outflow`=mean(Outflow,na.rm=TRUE)) %>%
-  mutate(Diff_24_hour_mean_outflow=Outflow-`24_hour_mean_outflow`) %>%
-  mutate(`Percent difference from daily mean outflow`=(Diff_24_hour_mean_outflow/`24_hour_mean_outflow`)*100)
+group_by(`Flowway`,Date) %>%
+mutate(`24_hour_mean_outflow`=mean(Outflow,na.rm=TRUE)) %>%
+mutate(Diff_24_hour_mean_outflow=Outflow-`24_hour_mean_outflow`) %>%
+mutate(`Percent difference from daily mean outflow`=(Diff_24_hour_mean_outflow/`24_hour_mean_outflow`)*100)
 
 #Join with RPA data
 Flow_diff_24_mean_w_RPA <-RPAs_Sorted %>%
-  left_join(Flow_diff_24_mean,by=c("Flowway","Date","Hour"))
+left_join(Flow_diff_24_mean,by=c("Flowway","Date","Hour"))
 
 #Figures
 ggplot(Flow_diff_24_mean_w_RPA ,aes(`Diff_24_hour_mean_outflow`,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-  theme_bw()+facet_grid(`Flowpath Region`~Flowway,scales="free")+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-  geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(-25,25))+
-  labs(title="TPO4 vs outflow  ",y="percent diff TP",x="diff flow",color=NULL)
+theme_bw()+facet_grid(`Flowpath Region`~Flowway,scales="free")+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(-25,25))+
+labs(title="TPO4 vs outflow  ",y="percent diff TP",x="diff flow",color=NULL)
 
 
 
