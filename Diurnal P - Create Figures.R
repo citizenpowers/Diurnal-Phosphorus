@@ -18,7 +18,9 @@ library(e1071)
 RPAs_Raw <-  read_csv("Data/RPAs_Raw.csv") 
 
 #RPA tidy data
-RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
+RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv") %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE)  
 
 #RPA tidy data outliers removed and replaced with quantile(.75)+1.5*IQR
 RPAs_Sorted_outliers_removed <- read_csv("Data/RPAs Sorted outliers removed.csv")
@@ -31,19 +33,29 @@ Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date 
 
 #RPA and flow DF. 
 RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv") %>%
-mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
+mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE) 
 
 #RPA Flow and Stage Data
-RPAs_with_Flow_Stage  <- read_csv("Data/RPA and Flow and Stage.csv")
+RPAs_with_Flow_Stage  <- read_csv("Data/RPA and Flow and Stage.csv") %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE)  
 
 #RPA Flow and Stage and weather data
-RPAs_with_Flow_Stage_Weather <- read_csv("Data/RPA and Flow Stage Weather.csv")
+RPAs_with_Flow_Stage_Weather <- read_csv("Data/RPA and Flow Stage Weather.csv") %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE)
 
 #Import RPA Flow and Stage and weather data
-RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv")
+RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv") %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE)  
 
 #Import RPA Flow and Stage and weather ands Inflow TP data
-RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- read_csv("Data/RPA and Flow Stage Weather Sonde Inflow TP.csv")
+RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- read_csv("Data/RPA and Flow Stage Weather Sonde Inflow TP.csv") %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE)
 
 #sta2 c3 =2296 acres
 #STA34 C3B 2114 + c3A 2444 acres
@@ -379,19 +391,19 @@ ggsave("Figures/TPO4 vs Flow by Station and Month from days with Continuous Outl
 
 #Hourly diel P with Inflow conditions complete days from days of stable flow
 ggplot(filter(RPAs_with_Flow_Complete_Days,`Inflow Category`!="Reverse Flow", `Continuous InFlow`==TRUE),aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-  theme_bw()+facet_grid(`Inflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-  geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
-  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-  labs(title="Hourly Deviation from Daily Median by Inflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+theme_bw()+facet_grid(`Inflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Inflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Inflow Strength- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly TP Variation from the Daily Median by Outflow category from days of stable flow
 ggplot(filter(RPAs_with_Flow_Complete_Days,`Outflow Category`!="Reverse Flow",`Continuous OutFlow`==TRUE) ,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-  theme_bw()+facet_grid(`Outflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-  geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
-  scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
-  labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
+theme_bw()+facet_grid(`Outflow Category`~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+theme(legend.position="bottom")+coord_cartesian(ylim = c(-10,10))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+labs(title="Hourly Deviation from Daily Median by Outflow Strength",y="TPO4 Deviation from daily median (ug/L)",x="Hour",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength- complete days.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 

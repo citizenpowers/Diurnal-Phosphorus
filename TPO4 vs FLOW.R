@@ -42,7 +42,7 @@ RPAs_with_Flow_outflows <- RPAs_with_Flow %>%
 #filter(`Flowpath Region`=="Outflow") %>%
 #filter(Outflow>2) %>%
 mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
-mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
 filter(Flag ==TRUE)
 
 ggplot(RPAs_with_Flow_outflows ,aes(`Outflow HLR`,(TPO4),color=Station))+geom_point()+theme_bw()+geom_smooth(color="black")+
@@ -58,7 +58,6 @@ scale_colour_brewer( type = "qual", palette = "Set2")+facet_grid(Station~Month)+
 labs(title="Outflows",y="Flow (cfs)",x="Date")
 
 
-
 #find outlying values
 RPAs_with_Flow_outflows_outlying <- RPAs_with_Flow_outflows%>%
 filter(Station=="G334",Month=="Jun",Date <"2017-06-01")
@@ -66,7 +65,6 @@ filter(Station=="G334",Month=="Jun",Date <"2017-06-01")
 ggplot(RPAs_with_Flow_outflows_outlying ,aes(`Outflow HLR`,(TPO4)))+geom_point(shape=21,size=3)+geom_smooth(color="black")+
 scale_colour_brewer( type = "qual", palette = "Set2")+coord_cartesian(ylim = c(0,100),xlim = c(0,35))+theme_bw()+
 labs(title="Outflow effect on Phosphorus",y="TPO4 (ug/L)",x="HLR (cm/day)")
-
 
 ggplot(RPAs_with_Flow_outflows_outlying ,aes(Date,(TPO4)))+geom_point(shape=21,size=3)+
 scale_colour_brewer( type = "qual", palette = "Set2")+theme_bw()+

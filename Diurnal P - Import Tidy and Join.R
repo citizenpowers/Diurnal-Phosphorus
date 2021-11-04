@@ -109,6 +109,9 @@ write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv",row.names=FALSE)
 
 # Step 2: Import and Tidy RPA data  --------------------------------------
 
+#Import flow data from csv
+Combined_BK_Flow <-  read_csv("Data/Combined_BK_Flow.csv") 
+
 #RPA data from outflows 
 RPAs_outflows <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
@@ -384,15 +387,18 @@ mutate(Season=if_else(between(month(Date),5,11),"Wet Season","Dry Season")) %>%
 mutate(`Outflow Category` = as.factor(case_when( between(Outflow,0,10) ~ "0-10 (cfs)",between(Outflow,10,500) ~ "10-500 (cfs)",between(Outflow,500,1000) ~ "500-1000 (cfs)", Outflow>1000 ~ "1000+ (cfs)", Outflow<0 ~ "Reverse Flow"))) %>%
 mutate(`Inflow Category` = as.factor(case_when( between(Inflow,0,10) ~ "0-10 (cfs)",between(Inflow,10,500) ~ "10-500 (cfs)",between(Inflow,500,1000) ~ "500-1000 (cfs)", Inflow>1000 ~ "1000+ (cfs)", Inflow < 0 ~ "Reverse Flow"))) %>%
 mutate(`Inflow Category`=factor(`Inflow Category`,levels = c("Reverse Flow","0-10 (cfs)","10-500 (cfs)","500-1000 (cfs)","1000+ (cfs)"))) %>%
-mutate(`Outflow HLR Category` = as.factor(case_when( between(`Outflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Outflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Outflow HLR`,10,20) ~ "10-20 (cm/day)",`Outflow HLR`>20 ~ "20+ (cm/day)", `Outflow HLR`<0 ~ "Reverse Flow"))) %>%
-mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) %>%
-mutate(`Inflow HLR Category` = as.factor(case_when( between(`Inflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Inflow HLR`,.1,10) ~ "0.1-10 (cm/day)",between(`Inflow HLR`,10,20) ~ "10-20 (cm/day)",`Inflow HLR`>20 ~ "20+ (cm/day)", `Inflow HLR`<0 ~ "Reverse Flow"))) %>%
-mutate(`Inflow HLR Category`=factor(`Inflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10-20 (cm/day)","20+ (cm/day)"))) 
+mutate(`Outflow HLR Category` = as.factor(case_when( between(`Outflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Outflow HLR`,.1,10) ~ "0.1-10 (cm/day)",`Outflow HLR`>10 ~ "10+ (cm/day)", `Outflow HLR`<0 ~ "Reverse Flow"))) %>%
+mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10+ (cm/day)"))) %>%
+mutate(`Inflow HLR Category` = as.factor(case_when( between(`Inflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Inflow HLR`,.1,10) ~ "0.1-10 (cm/day)",`Inflow HLR`>10 ~ "10+ (cm/day)" ,`Inflow HLR`>20 ~ "20+ (cm/day)", `Inflow HLR`<0 ~ "Reverse Flow"))) %>%
+mutate(`Inflow HLR Category`=factor(`Inflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10+ (cm/day)"))) 
 
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
 # Step 9: Join with Stage Data and save DF ----------------------------------------------------
+
+#import stage data form csv
+Combined_Stage <- read_csv("Data/Stage All Flowways.csv")
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
 left_join(Combined_Stage ,by=c("Flowway","Date","Hour")) %>%

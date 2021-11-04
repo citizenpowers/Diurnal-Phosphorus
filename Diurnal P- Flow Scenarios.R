@@ -16,7 +16,9 @@ citation("zoo")
 
 # Import data for RPA analysis -------------------------------------------------------------
 #RPA tidy data
-RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv")
+RPAs_Sorted <- read_csv("Data/RPAs Sorted.csv") %>%
+mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
+filter(Flag ==FALSE)  
 
 #Import Flow Data
 Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Flow = col_number(),HLR = col_number()))
@@ -108,7 +110,10 @@ summarise(n=n())
 
 flow_weighted_mean <- Outflow_TP_Load_Scenarios %>%
 group_by(Flowway,Scenario) %>%
-summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE),`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE)*27.31*60*60,`FWM Concentration (ug/L)`=`Cumulative P Load (kg)`/`Cumulative Flow (L)`*1000*1000*1000,n=sum(!is.na(Value)),sd=sd(`Value`/`Cumulative Flow (L)`*1000*1000*1000,na.rm = TRUE),se=sd/sqrt(n))
+summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE),`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE)*27.31*60*60,`Cumulative Flow (acre-ft)`=`Cumulative Flow (L)`/1233000,`FWM Concentration (ug/L)`=`Cumulative P Load (kg)`/`Cumulative Flow (L)`*1000*1000*1000,n=sum(!is.na(Value)),sd=sd(`Value`/`Cumulative Flow (L)`*1000*1000*1000,na.rm = TRUE),se=sd/sqrt(n))
+
+write.csv(flow_weighted_mean,"./Data/Outflow_FWM_TP_Load_Scenarios_Summary.csv")
+
 
 flow_weighted_mean_table <- flow_weighted_mean%>%
 pivot_wider(names_from = Scenario,values_from=`FWM Concentration (ug/L)`)  
