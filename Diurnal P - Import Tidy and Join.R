@@ -180,7 +180,8 @@ mutate(PERCENT_RANK=cume_dist(TPO4)) %>%
 mutate(Scaled_Value=TPO4/max(TPO4)) %>%
 mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`24_hour_median`=median(TPO4,na.rm=TRUE),`log mean`=mean(log10(TPO4),na.rm = TRUE),`Cube root mean`=mean((TPO4)^(1/3),na.rm = TRUE)) %>%
 mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,Diff_24_hour_median=TPO4-`24_hour_median`,Diff_24_hour_log_trans=log(TPO4)-`log mean`,Diff_24_hour_cube_root=(TPO4^(1/3)-`Cube root mean`)^3) %>%
-mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100,`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) 
+mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100,`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) %>%
+mutate(`Station` = factor(`Station`, levels = c("G333C", "G334","G3777C","G378C","G379D","G380C","G384C","G381B")))  
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
 
