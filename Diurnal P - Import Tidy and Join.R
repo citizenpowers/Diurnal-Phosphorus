@@ -10,6 +10,8 @@ library(ggplot2)
 library(lubridate)
 library(tidyr)
 library(maptools)
+library(broom)
+library(tidyverse)
 
 
 #Steps (Only Run if data need update. Skip to create fig script otherwise) 
@@ -81,7 +83,7 @@ fill(`G377A-C-Q`,`G377B-C-Q`,`G377C-C-Q`,`G377D-C-Q`,`G377E-C-Q`) %>%
 mutate(G377=rowSums(.[2:6],na.rm=TRUE))          
 
 #Combined Outflow over entire flowway
-Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,10,01,0,0,0,tz = "UTC"),by = "min")),"date") %>%
+Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "US/Eastern"), to=ISOdate(2017,10,01,0,0,0,tz = "US/Eastern"),by = "min")),"date") %>%
 left_join(G381_C_BK,by="date") %>%  #combine data from G381, G334, G379D
 left_join(G379_C_BK,by="date") %>%
 left_join(G334_S_BK,by="date")  %>%
@@ -131,14 +133,39 @@ mutate(TPO4=if_else(TPO4<1,1,TPO4),TRP=if_else(TRP<1,1,TRP))   #TPO4 and TRP val
 
 write.csv(RPAs_Raw,"Data/RPAs_Raw.csv",row.names=FALSE)
 
+#Tidy RPA data
+RPAs_tidy <- RPAs_Raw %>%
+mutate(Month=month(Date,label=TRUE),Day=day(Date),Time=hour(Date)+ minute(Date)/60,Year=year(Date),Hour=hour(Date),Minute=minute(Date),date=Date,Date=as.Date(Date)) %>%
+mutate(Month = factor(Month, levels=month.abb)) %>%
+mutate(Station_ID=Station) %>%
+mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
+mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
+mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow"))      #Add flowpath position
+
+RPAs_Sorted <- RPAs_tidy %>%
+group_by(Station,Year,Day,Month) %>%
+mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
+mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
+mutate(Scaled_Value=TPO4/max(TPO4)) %>%
+mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`24_hour_median`=median(TPO4,na.rm=TRUE),`log mean`=mean(log10(TPO4),na.rm = TRUE),`Cube root mean`=mean((TPO4)^(1/3),na.rm = TRUE)) %>%
+mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,Diff_24_hour_median=TPO4-`24_hour_median`,Diff_24_hour_log_trans=log(TPO4)-`log mean`,Diff_24_hour_cube_root=(TPO4^(1/3)-`Cube root mean`)^3) %>%
+mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100,`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) %>%
+mutate(`Station` = factor(`Station`, levels = c("G333", "G334","G377","G378","G379","G380","G384","G381")))  
+
+write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
+
+
+# Outlier analysis- Create dataset with ouliers removed --------------------------------------------------------
+
+
 #Detect Outliers limits per station
 Outliers <- RPAs_outflows %>%  
 bind_rows(RPAs_midflow) %>%
 mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
 group_by(Station) %>%
 summarise(n=n(),`min TPO4`=min(TPO4,na.rm=TRUE),`max TPO4`=max(TPO4,na.rm=TRUE),mean=mean(TPO4,na.rm=TRUE),median=median(TPO4,na.rm=TRUE),`Q1`=quantile(TPO4,.25,na.rm = TRUE),`Q3`=quantile(TPO4,.75,na.rm = TRUE),IQR=Q3-Q1,`Mild Outliers`=Q3+1.5*IQR,`Extreme Outliers`=Q3+3*IQR,
-`TPO4 Observations`=sum(is.finite(TPO4)),`NAs Observed`=sum(is.na(TPO4)),`Below detection`=sum(if_else(TPO4<1,1,0),na.rm=TRUE),`above outlier`=sum(if_else(TPO4>`Mild Outliers`,1,0),na.rm=TRUE),
-`above extreme outlier`=sum(if_else(TPO4>`Extreme Outliers`,1,0),na.rm=TRUE),`% mild outliers`=percent(`above outlier`/n()),`% extreme mild outliers`=percent(`above extreme outlier`/n()))
+            `TPO4 Observations`=sum(is.finite(TPO4)),`NAs Observed`=sum(is.na(TPO4)),`Below detection`=sum(if_else(TPO4<1,1,0),na.rm=TRUE),`above outlier`=sum(if_else(TPO4>`Mild Outliers`,1,0),na.rm=TRUE),
+            `above extreme outlier`=sum(if_else(TPO4>`Extreme Outliers`,1,0),na.rm=TRUE),`% mild outliers`=percent(`above outlier`/n()),`% extreme mild outliers`=percent(`above extreme outlier`/n()))
 
 write.csv(Outliers, "Data/Outliers.csv",row.names=FALSE)
 
@@ -155,34 +182,14 @@ mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G3
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow"))   %>%     #Add flowpath position
 mutate(TPO4=case_when(Station=="G333" & TPO4 >193.25 ~ 193.25,
-                      Station=="G334" & TPO4 >35.28 ~ 35.28,
-                      Station=="G377" & TPO4 >87.50 ~ 87.50,
-                      Station=="G378" & TPO4 >24.00 ~ 24.00,
-                      Station=="G379" & TPO4 >53.50 ~ 53.50,
-                      Station=="G380" & TPO4 >120.50 ~ 120.50,
-                      Station=="G381" & TPO4 >33.50 ~ 33.50,
-                      Station=="G384" & TPO4 >39.00 ~ 39.00,
-                      TRUE~as.numeric(as.character(TPO4))))     #Replace outliers with quantile(.75)+1.5*IQR
-
-#Keep Outliers
-RPAs_tidy <- RPAs_Raw %>%
-mutate(Month=month(Date,label=TRUE),Day=day(Date),Time=hour(Date)+ minute(Date)/60,Year=year(Date),Hour=hour(Date),Minute=minute(Date),date=Date,Date=as.Date(Date)) %>%
-mutate(Month = factor(Month, levels=month.abb)) %>%
-mutate(Station_ID=Station) %>%
-mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G381",`Station`=="G334" ~ "G334",`Station`=="G384C" ~ "G384",`Station`=="G380C" ~ "G380",`Station`=="G378C" ~ "G378",`Station`=="G377C" ~ "G377",`Station`=="G333C" ~ "G333")) %>%
-mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
-mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow"))      #Add flowpath position
-  
-RPAs_Sorted <- RPAs_tidy %>%
-group_by(Station,Year,Day,Month) %>%
-mutate(RANK=row_number(TPO4),`TRP Rank`=row_number(TRP))  %>%
-mutate(PERCENT_RANK=cume_dist(TPO4)) %>% 
-mutate(Scaled_Value=TPO4/max(TPO4)) %>%
-mutate(`24_hour_mean`=mean(TPO4,na.rm=TRUE),`24_hour_median`=median(TPO4,na.rm=TRUE),`log mean`=mean(log10(TPO4),na.rm = TRUE),`Cube root mean`=mean((TPO4)^(1/3),na.rm = TRUE)) %>%
-mutate(Diff_24_hour_mean=TPO4-`24_hour_mean`,Diff_24_hour_median=TPO4-`24_hour_median`,Diff_24_hour_log_trans=log(TPO4)-`log mean`,Diff_24_hour_cube_root=(TPO4^(1/3)-`Cube root mean`)^3) %>%
-mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*100,`Percent difference from daily median`=(Diff_24_hour_median/`24_hour_median`)*100) 
-
-write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
+                        Station=="G334" & TPO4 >35.28 ~ 35.28,
+                        Station=="G377" & TPO4 >87.50 ~ 87.50,
+                        Station=="G378" & TPO4 >24.00 ~ 24.00,
+                        Station=="G379" & TPO4 >53.50 ~ 53.50,
+                        Station=="G380" & TPO4 >120.50 ~ 120.50,
+                        Station=="G381" & TPO4 >33.50 ~ 33.50,
+                        Station=="G384" & TPO4 >39.00 ~ 39.00,
+                        TRUE~as.numeric(as.character(TPO4))))     #Replace outliers with quantile(.75)+1.5*IQR
 
 RPAs_Sorted_outliers_removed <- RPAs_outliers_removed %>%
 group_by(Station,Year,Day,Month) %>%
@@ -239,7 +246,7 @@ pivot_wider(names_from = STATION, values_from = VALUE) %>%
 arrange(date) %>%  
 fill(`G381B-H`,`G380B-T`) 
 
-Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,10,01,0,0,0,tz = "UTC"),by = "min")),"date") %>%
+Combined_Stage <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "US/Eastern"), to=ISOdate(2017,10,01,0,0,0,tz = "US/Eastern"),by = "min")),"date") %>%
 full_join(STA2C3_Stage,by="date") %>%  
 full_join(STA34_central_flowway_Stage ,by="date") %>%
 full_join(STA34_western_flowway_Stage ,by="date") %>%  
@@ -287,9 +294,6 @@ mutate(Temp_Diff_24_hour_median=`Avg Hourly Temp`-median(`Avg Hourly Temp`),SpCo
         `DO Percent Diff from 24 median`=DO_Diff_24_hour_median/median(`Avg Hourly DO`)*100,`pH Percent Diff from 24 median`=pH_Diff_24_hour_median/median(`Avg Hourly pH`)*100,
         `SpCond Percent Diff from 24 median`=SpCond_Diff_24_hour_median/median(`Avg Hourly SpCond`)*100,`Temp Percent Diff from 24 median`=Temp_Diff_24_hour_median/median(`Avg Hourly Temp`)*100)
 
-
-
-  
 # Step 6: Import and Tidy Weather Data ------------------------------------
 
 S7_R_BK <- mutate(select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4),date=dmy_hms(date))  #Rain data at S7
@@ -313,7 +317,7 @@ BELLW_WNVS_BK_tidy <- BELLW_WNVS_BK %>%
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>%
 select(-date)
 
-Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,9,14,0,0,0,tz = "UTC"),by = "min")),"date") %>%
+Combined_Weather <- setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "US/Eastern"), to=ISOdate(2017,9,14,0,0,0,tz = "US/Eastern"),by = "min")),"date") %>%
 mutate(Date=as.Date(date),Hour=hour(date),Minute=minute(date)) %>% 
 select(-date) %>%
 left_join(S7_R_DA,by="Date")%>%  

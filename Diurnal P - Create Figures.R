@@ -221,7 +221,7 @@ ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.
 # Hourly TP variation by month --------------------------------------------
 
 #Hourly TP Variation from the Daily Median by Station
-ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+ggplot(RPAs_with_Flow,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
 geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
 theme_bw()+facet_grid(Station_ID~Month)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
 geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+coord_cartesian(ylim = c(-10,10))+
@@ -231,7 +231,7 @@ labs(title="Hourly Deviation from Daily Median by Month",y="TPO4 Deviation from 
 ggsave("Figures/Hourly TP Variation from the Daily Median by month.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly % TP Variation from the Daily Median by Station and month
-ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily median`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
+ggplot(RPAs_with_Flow,aes(Time,`Percent difference from daily median`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
 geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
 facet_grid(Station_ID~Month)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-50,50,5))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+coord_cartesian(ylim = c(-50,50))+theme(legend.position="bottom")+guides(fill=guide_legend(title="Station"))+
@@ -241,7 +241,7 @@ ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.
 
 
 #Hourly TP Variation from the Daily Mean by Station and month
-ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
+ggplot(RPAs_with_Flow,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_grid(Station~Month)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="TP Variation from Daily by Station and Month",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
@@ -712,7 +712,7 @@ stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.
 
 ggsave("Figures/Change in Inflow Stage Effect on Diel P from days of over 1 inch Inflow stage change.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
-with_tz("2021-05-05 12:00:00","UTC")
+with_tz("2021-05-05 12:00:00","US/Eastern")
 
 # Sonde Analysis ----------------------------------------------------------
 

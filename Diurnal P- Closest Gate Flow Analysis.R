@@ -75,7 +75,7 @@ fill(`G333A-C-Q`,`G333B-C-Q`,`G333C-C-Q`,`G333D-C-Q`,`G333E-C-Q`) %>%
 select(date,`G333C-C-Q`) %>%
 rename(`G333C`="G333C-C-Q")  
 
-Closest_Gate_Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,10,01,0,0,0,tz = "UTC"),by = "min")),"date") %>%
+Closest_Gate_Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "US/Eastern"), to=ISOdate(2017,10,01,0,0,0,tz = "US/Eastern"),by = "min")),"date") %>%
 left_join(G379D_C_BK,by="date") %>%  #combine data from G381, G334, G379D
 left_join(G381B_C_BK,by="date") %>%
 left_join(G334_S_BK,by="date")  %>%

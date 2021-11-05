@@ -19,10 +19,6 @@ PFLUX_WQ_Data <- read_excel("Data/PFLUX WQ LIMSP.xlsx")  #WQ Data
 PFLUX_Sonde_Data_STA2C1 <- read_excel("Data/All Combined Sonde Data STA2C1.xlsx",sheet = "Combined Data")
 PFLUX_Sonde_Data_STA2C3 <-read_excel("Data/STA2C3 All Sonde Data.xlsx")
 
-test <-distinct(ungroup(PFLUX_Sonde_Data_tidy),Station)
-test1 <-distinct(ungroup(PFLUX_WQ_Data_tidy),Station)
-
-
 # Tidy WQ Data ---------------------------------------------------------------
 
 PFLUX_WQ_Data_tidy <- PFLUX_WQ_Data %>%
@@ -42,7 +38,7 @@ filter(Station %in% c("ST2C1A3","ST2C1C3","ST2C1F3","ST2C1G3","ST2C1H2","ST2C1H3
 mutate(`Flowway` = case_when(`Station` %in% c("ST2C3C128","ST2C3C164","ST2C3C20","ST2C3C200","ST2C3C56","ST2C3C92")~"STA-2 FW3",
                              `Station` %in% c("ST2C1A3","ST2C1C3","ST2C1F3","ST2C1G3","ST2C1H2","ST2C1H3","ST2C1OUT") ~ "STA-1 FW1",
                               TRUE~as.character(Station)))       #Add flowway info to RPA data
-  
+test <- select(PFLUX_WQ_Data_tidy,FST,Date,Year,Month,Day,Hour,Minute,Time)  
 
 
 # Tidy Sonde Data ---------------------------------------------------------
@@ -94,7 +90,7 @@ title =element_text(size = 15),strip.text.x = element_text(size =12),legend.text
 
 
 #Hourly TP Variation from the Daily Mean by Station
-ggplot(PFLUX_WQ_Data_tidy ,aes(Time,Diff_24_hour_median,color=Station,fill=Station))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
+ggplot(PFLUX_WQ_Sonde_tidy ,aes(Time,Diff_24_hour_median,color=Station,fill=Station))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+theme_bw()+
 facet_wrap(~Station,nrow = 2)+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+Custom_theme+theme(legend.position="bottom")+
 labs(title="Hourly Variation from Daily Median from PFLUX Autosamplers",y=bquote("Deviation from daily median TP"~~(mu*g~L^-1)),x="Hour")
