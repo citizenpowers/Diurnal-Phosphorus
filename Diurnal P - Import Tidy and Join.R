@@ -212,7 +212,6 @@ mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*1
 mutate(`Station` = factor(`Station`, levels = c("G333C", "G334","G3777C","G378C","G379D","G380C","G384C","G381B")))  
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
->>>>>>> 33bfcadcdf4b7fc0a3a0ded487cd26f3a65fa1ab
 
 RPAs_Sorted_outliers_removed <- RPAs_outliers_removed %>%
 group_by(Station,Year,Day,Month) %>%
