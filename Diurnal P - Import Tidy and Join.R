@@ -182,7 +182,6 @@ mutate(`Station` = case_when(`Station`=="G379D"~ "G379",`Station`=="G381B" ~ "G3
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2 Central",`Station`=="G379"~"STA-3/4 Central",`Station`=="G381"~"STA-3/4 Western",`Station`=="G380"~"STA-3/4 Western",`Station`=="G384"~"STA-3/4 Western",`Station`=="G378" ~ "STA-3/4 Central",`Station`=="G377" ~ "STA-3/4 Central",`Station`=="G333" ~ "STA-2 Central")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow",`Station`=="G380" ~ "Inflow",`Station`=="G378" ~ "Midflow",`Station`=="G377" ~ "Inflow",`Station`=="G333" ~ "Inflow"))   %>%     #Add flowpath position
 mutate(TPO4=case_when(Station=="G333" & TPO4 >193.25 ~ 193.25,
-<<<<<<< HEAD
                         Station=="G334" & TPO4 >35.28 ~ 35.28,
                         Station=="G377" & TPO4 >87.50 ~ 87.50,
                         Station=="G378" & TPO4 >24.00 ~ 24.00,
@@ -191,15 +190,7 @@ mutate(TPO4=case_when(Station=="G333" & TPO4 >193.25 ~ 193.25,
                         Station=="G381" & TPO4 >33.50 ~ 33.50,
                         Station=="G384" & TPO4 >39.00 ~ 39.00,
                         TRUE~as.numeric(as.character(TPO4))))     #Replace outliers with quantile(.75)+1.5*IQR
-=======
-                      Station=="G334" & TPO4 >35.28 ~ 35.28,
-                      Station=="G377" & TPO4 >87.50 ~ 87.50,
-                      Station=="G378" & TPO4 >24.00 ~ 24.00,
-                      Station=="G379" & TPO4 >53.50 ~ 53.50,
-                      Station=="G380" & TPO4 >120.50 ~ 120.50,
-                      Station=="G381" & TPO4 >33.50 ~ 33.50,
-                      Station=="G384" & TPO4 >39.00 ~ 39.00,
-                      TRUE~as.numeric(as.character(TPO4))))     #Replace outliers with quantile(.75)+1.5*IQR
+   
 
 #Keep Outliers
 RPAs_tidy <- RPAs_Raw %>%
