@@ -218,6 +218,25 @@ labs(title="Percent Deviation from Daily Median by Hour",y="TPO4 Percent Deviati
 ggsave("Figures/Hourly Percent Variation in TP from the Daily Median by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 
+# Data added at the boundaries --------------------------------------------
+
+RPAs_Sorted_negative_time <-RPAs_Sorted %>%
+mutate(Time=Time-24)  
+
+RPAs_Sorted_added_time <-RPAs_Sorted %>%
+mutate(Time=Time+24)  
+
+RPAS_extra_time <- RPAs_Sorted %>%
+rbind(RPAs_Sorted_negative_time,RPAs_Sorted_added_time)
+
+#Hourly TP Variation from the Daily Mean by Station
+ggplot(RPAS_extra_time ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black",span=.5)+theme_bw()+
+#geom_smooth(data=RPAs_Sorted_outliers_removed,aes(Time,Diff_24_hour_mean),method="loess",color="red")+  #comparison to outliers removed
+facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+#scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+coord_cartesian(xlim = c(0, 24))+  
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
 # Hourly TP variation by month --------------------------------------------
 
 #Hourly TP Variation from the Daily Median by Station

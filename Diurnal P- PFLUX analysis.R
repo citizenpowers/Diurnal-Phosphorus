@@ -36,7 +36,6 @@ filter(Station %in% c("ST2C1A3","ST2C1C3","ST2C1F3","ST2C1G3","ST2C1H2","ST2C1H3
 mutate(`Flowway` = case_when(`Station` %in% c("ST2C3C128","ST2C3C164","ST2C3C20","ST2C3C200","ST2C3C56","ST2C3C92")~"STA-2 FW3",
                              `Station` %in% c("ST2C1A3","ST2C1C3","ST2C1F3","ST2C1G3","ST2C1H2","ST2C1H3","ST2C1OUT") ~ "STA-1 FW1",
                               TRUE~as.character(Station)))       #Add flowway info to RPA data
-test <- select(PFLUX_WQ_Data_tidy,FST,Date,Year,Month,Day,Hour,Minute,Time)  
 
 
 # Tidy Sonde Data ---------------------------------------------------------
