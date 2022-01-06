@@ -286,10 +286,6 @@ rbind(Cont_flow_days)
 write.csv(All_data_table,"Data/Extracted Model Parameters.csv",row.names=FALSE)
 
 
-
-
-
-
 # Calculate Confidence Intervals ------------------------------------------
 #no known method to calculate CI for LOESS models
 
