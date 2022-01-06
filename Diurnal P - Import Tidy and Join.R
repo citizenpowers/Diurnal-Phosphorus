@@ -457,7 +457,7 @@ left_join(Sonde_Tidy_medians ,by=c("Date","Hour","Station"))
 write.csv(RPAs_with_Flow_Stage_Weather_Sonde_medians, "Data/RPA and Flow Stage Weather Sonde medians.csv",row.names=FALSE)
 
 
-# Step 11: Join with Inflow compliance TP Data ------------------------------------------
+# Step 11: Join with Inflow compliance TP Data --(needs work)----------------------------------------
 RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- RPAs_with_Flow_Stage_Weather_Sonde %>%
 mutate(`Flowway` = case_when(`Station`=="G334"~"STA-2C3",`Station`=="G379"~"STA-3/4C2",`Station`=="G381"~"STA-3/4C3",`Station`=="G380"~"STA-3/4C3",`Station`=="G384"~"STA-3/4C3")) %>%        #Add flowway info to RPA data
 mutate(`Flowpath Region` = case_when(`Station`=="G334"~"Outflow",`Station`=="G379"~"Outflow",`Station`=="G381"~"Outflow",`Station`=="G380"~"Inflow",`Station`=="G384"~"Midflow")) %>%        #Add flowpath position
