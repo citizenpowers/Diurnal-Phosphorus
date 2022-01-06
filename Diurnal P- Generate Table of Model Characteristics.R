@@ -256,7 +256,6 @@ Outflow_HLR_All <- rbind(Outflow_HLR_1,Outflow_HLR_2)  %>% rbind(Outflow_HLR_3)
 
 ggplot(Outflow_HLR_All,aes(`Outflow HLR Category`,Amplitude,fill=Model))+geom_point(shape=21,size=2)+facet_grid(`Flowpath Region`~Flowway)+theme_bw()+ theme(axis.text.x=element_text(angle=90,hjust=1))
 
-
 #Days of continious flow
 Complete_inflow_days <-Complete_Days_extra_time %>% filter(`Continuous InFlow`=="TRUE")
 Complete_outflow_days <-Complete_Days_extra_time %>% filter(`Continuous OutFlow`=="TRUE")
@@ -265,9 +264,9 @@ Complete_flow_days <-Complete_Days_extra_time %>% filter(`Continuous OutFlow`=="
 #Continous inflow
 Cont_inflow_days <- rbind(Complete_inflow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_inflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Inflow")
 #continous outflow
-Cont_outflow_days <- rbind(Complete_outflow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_outflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters())
+Cont_outflow_days <- rbind(Complete_outflow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_outflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Outflow")
 #continous inflow and outflow
-Cont_flow_days <- rbind(Complete_flow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_flow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters())
+Cont_flow_days <- rbind(Complete_flow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_flow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Inflow and Outflow")
 
 
 
