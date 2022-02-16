@@ -153,9 +153,10 @@ ggsave("Figures/Hourly TP Variation from the Daily Median by Flowway and Region.
 #Hourly TP Variation from the Daily Median by Station
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_median,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
 geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
+geom_smooth(method="gam",color="blue")+
 theme_bw()+facet_grid(~Station_ID)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2")+
 geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+coord_cartesian(ylim = c(-10,10))+
-scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  coord_cartesian(ylim = c(-10,10),xlim = c(0,24))+guides(fill=guide_legend(title="Station"))+theme(legend.position="bottom",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
 labs(title="Deviation from Daily Median by Hour",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
 
 ggsave("Figures/Hourly TP Variation from the Daily Median.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
@@ -195,9 +196,10 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 #boxplots medians
-ggplot(RPAs_Sorted,aes(Hour,Diff_24_hour_median,fill=Station))+geom_boxplot()+geom_smooth(method="loess")+
+ggplot(RPAs_Sorted,aes(as.factor(Hour),Diff_24_hour_median,fill=Station))+geom_boxplot()+#geom_smooth(method="loess")+
 scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
-scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+#scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+facet_wrap(~Station)+theme_bw()+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 #Hourly % TP Variation from the Daily Mean by Station
