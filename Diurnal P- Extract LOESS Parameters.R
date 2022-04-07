@@ -1,4 +1,4 @@
-#this scriptis test code. do not use for production
+#this entire script is test code. do not use for production
 
 
 library(readr)
@@ -68,6 +68,39 @@ Model_predictions_GAM <-GAM_MODEL(RPAS_extra_time)
 
 Model_Parameters_GAM <-GAM_Extract_Parameters(Model_predictions_GAM)
 
+
+
+# Test --------------------------------------------------------------------
+span_width <- 0.5 
+
+
+G384_DF <- RPAS_extra_time %>% filter(Station=="G384") 
+
+
+# 4 iterations 
+G384_model <- loess(Diff_24_hour_mean ~ Time, G384_DF,span = span_width,method.args = list(family = "symetric",degree=2,iterations=4))
+
+fit <- filter(G384_DF,Station=="G384") %>% mutate(Predicted=predict(data=.,G384_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G384_model, Time, se = TRUE)$se.fit)
+
+ggplot(fit,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
+geom_line(aes(Time,Predicted,color=Station))+geom_line(aes(Time,SE+Predicted),color="black",linetype="dashed")+geom_line(aes(Time,Predicted-SE),color="black",linetype="dashed")+
+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
+coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
+labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+
+# 1 iterations 
+G384_model_1 <- loess(Diff_24_hour_mean ~ Time, G384_DF,span = span_width,method.args = list(family = "symetric",degree=2,iterations=1))
+
+fit_1 <- filter(G384_DF,Station=="G384") %>% mutate(Predicted=predict(data=.,G384_model_1, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G384_model, Time, se = TRUE)$se.fit)
+
+ggplot(fit_1,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
+geom_line(aes(Time,Predicted,color=Station))+geom_line(aes(Time,SE+Predicted),color="black",linetype="dashed")+geom_line(aes(Time,Predicted-SE),color="black",linetype="dashed")+
+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
+coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
+labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+
+
+
 # Visualize ---------------------------------------------------------------
 
 
@@ -99,12 +132,8 @@ ggplot(G333_data,aes(Hour,mean(Diff_24_hour_mean)))+geom_point()+theme_bw()
 
 ggplot(G333_data,aes(Diff_24_hour_median))+geom_histogram()+theme_bw()
 
-
-
-
 ggplot(G333_data_Rolling_Mean,aes(Time,roll_mean))+geom_point()+theme_bw()
 G333_data_Rolling_Mean <- filter(Rolling_Mean_RPAs,Station=="G333")
-
 
 
 #LOESS Visualized Single Station
@@ -112,7 +141,7 @@ ggplot(filter(RPAS_extra_time,Station=="G334"),aes(Time,Diff_24_hour_mean,color=
 geom_smooth(method = "gam", formula = y ~s(x),color="red")+
 geom_smooth(method="loess",color="black",span=span_width,method.args = list(family = "symmetric",degree=2),se=FALSE)+
 #geom_smooth(data=slice_sample(filter(RPAS_extra_time,Station=="G377"),n=900),method="loess",color="green",span=span_width,method.args = list(family = "symmetric",degree=2),se=FALSE)+
-geom_line(data=filter(RPAS_extra_time,Station=="G334"),aes(Time,rollmean(Diff_24_hour_mean,4)),color="yellow")+  
+#geom_line(data=filter(RPAS_extra_time,Station=="G334"),aes(Time,rollmean(Diff_24_hour_mean,4)),color="yellow")+  
 theme_bw()+
 geom_line(data =filter(Model_predictions_LOESS,Station=="G334"),aes(Time,`LOESS Prediction`) ,color="blue")+coord_cartesian(ylim = c(-10,10),xlim = c(0,24))+
 scale_y_continuous(breaks = seq(-10,10,1))

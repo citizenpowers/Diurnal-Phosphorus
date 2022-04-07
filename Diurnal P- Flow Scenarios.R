@@ -27,7 +27,7 @@ Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Flow 
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv")
 
 
-# G334 continouos TP Load scenarios----------------------------------------------------
+# G334 continuous TP Load scenarios----------------------------------------------------
 
 Days_with_TPO4 <- RPAs_Sorted %>%                  #DF with days of TP sample collection. 
 filter(`Flowpath Region`=="Outflow") %>%  
@@ -36,7 +36,7 @@ summarize(`Has Sample`=sum(!is.na(TPO4))) %>%
 filter(`Has Sample`>0)
 
 Outflow_TP_Load_Scenarios_1 <- Combined_BK_Flow  %>%
-left_join(filter(select(RPAs_Sorted,2:13),`Flowpath Region`=="Outflow") ,by=c("Date","Hour","Flowway")) %>% 
+left_join(filter(select(RPAs_Sorted,2:14),`Flowpath Region`=="Outflow") ,by=c("Date","Hour","Flowway")) %>% 
 group_by(Flowway)  %>%
 mutate(`Date_Time`=ymd_hms(ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York")),`TP interpolated`=TPO4) %>%   #create hourly date time index
 mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                
@@ -91,6 +91,14 @@ mutate(`Inverse Diel P Pattern Flow`=cumsum(`Outflow Opposite Diel P Pattern Loa
 mutate(`100% flow between 8am-9pm`=cumsum(`Outflow 100% Day Load`))  %>%
 pivot_longer(`Measured flow (Baseline)`:`100% flow between 8am-9pm`,names_to = "Scenario", values_to = "Value") %>%
 mutate(`Scenario`=factor(`Scenario`,levels = c("100% flow between 8am-9pm", "Measured flow (Baseline)", "66% flow between 10pm-7am","Inverse Diel P Pattern Flow","75% flow between 12-4AM")))
+
+
+Mean_Flow_by_hour <-Outflow_TP_Load_Scenarios_1 %>%
+group_by(Flowway,Hour) %>%
+summarise(n=n(),`Hourly Flow 100% night`=mean(`Outflow 100% Night`,na.rm=TRUE),
+`Hourly Flow 66% day`=mean(`Outflow 66% Day Load`,na.rm=TRUE),
+`Hourly Flow 66% night`=mean(`Outflow 66% between 8pm-8am`,na.rm=TRUE))
+
 
 Complete_days <- Outflow_TP_Load_Scenarios_1 %>%                  #find complete days
 group_by(`Flowway`,Date,Scenario) %>%

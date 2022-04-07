@@ -22,7 +22,7 @@ library(zoo)
 #Step 2 Add data to boundaries of day
 #Step 2 Run functions at bottom of script
 #Step 3 Filter data by environmental condition and run through model and gather the parameters
-#Step 4 Combine Paramters into table for publication
+#Step 4 Combine Parameters into table for publication
 
 
 # Import Data ------------Step 1-------------------------------------------------
@@ -47,7 +47,8 @@ mutate(Time=Time+24)
 
 RPAS_extra_time <- RPAs_with_Flow_Stage_Weather_Sonde %>%
 rbind(RPAs_Sorted_negative_time,RPAs_Sorted_added_time) %>%
-mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")))
+mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
+filter(between(Time,-6,30))  #filter time between -10 and 34
   
 
 #Days of continuous flow
@@ -62,7 +63,7 @@ select(`Flowway`,Date,`Continuous OutFlow`,`Continuous InFlow`)
 RPAs_with_Flow_Complete_Days <-  RPAs_with_Flow_Stage_Weather_Sonde  %>%
 left_join(Days_with_continual_flow)
 
-#add data at boundaries to continious days DF
+#add data at boundaries to continuous days DF
 Complete_Days_negative_time <-RPAs_with_Flow_Complete_Days %>%
 mutate(Time=Time-24)  
 
@@ -80,7 +81,8 @@ GAM_MODEL <- function(df,min_obs)
 
 if(nrow(filter(df,Station=="G333"))>min_obs) {
 G333_model_GAM <- gam(data=filter(df,Station=="G333"),Diff_24_hour_mean ~ s(Time, bs="cs"))
-G333_Predicted_GAM<- filter(df,Station=="G333")  %>% add_fitted(G333_model_GAM,value="Predicted")}
+G333_Predicted_GAM<- filter(df,Station=="G333")  %>% add_fitted(G333_model_GAM,value="Predicted")} 
+
   
 if(nrow(filter(df,Station=="G334"))>min_obs) {
 G334_model_GAM <- gam(data=filter(df,Station=="G334"),Diff_24_hour_mean ~ s(Time, bs="cs"))
@@ -149,38 +151,46 @@ GAM_Extract_Parameters <- function(df)
 LOESS_MODEL <-function(df,span_width,min_obs)
 {
   if(nrow(filter(df,Station=="G333"))>min_obs) {
-  G333_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G333"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G333_Predicted<- filter(df,Station=="G333") %>% mutate(Predicted=predict(data=.,G333_model, Time, se = FALSE))}
+  G333_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G333"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G333_Predicted<- filter(df,Station=="G333") %>% mutate(Predicted=predict(data=.,G333_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G333_model, Time, se = TRUE)$se.fit)}
+  else {G333_Predicted<- filter(df,Station=="G333") %>% mutate(Predicted=NA,SE=NA)}
   
   if(nrow(filter(df,Station=="G334"))>min_obs) {
-  G334_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G334"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G334_Predicted<- filter(df,Station=="G334") %>% mutate(Predicted=predict(data=.,G334_model, Time, se = FALSE))}
+  G334_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G334"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G334_Predicted<- filter(df,Station=="G334") %>% mutate(Predicted=predict(data=.,G334_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G334_model, Time, se = TRUE)$se.fit)}
+  else {G334_Predicted<- filter(df,Station=="G334") %>% mutate(Predicted=NA,SE=NA)}
   
   if(nrow(filter(df,Station=="G381"))>min_obs) {
-  G381_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G381"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G381_Predicted<- filter(df,Station=="G381") %>% mutate(Predicted=predict(data=.,G381_model, Time, se = FALSE))}
-
+  G381_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G381"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G381_Predicted<- filter(df,Station=="G381") %>% mutate(Predicted=predict(data=.,G381_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G381_model, Time, se = TRUE)$se.fit)}
+  else {G381_Predicted<- filter(df,Station=="G381") %>% mutate(Predicted=NA,SE=NA)}
+  
   if(nrow(filter(df,Station=="G384"))>min_obs) {
-  G384_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G384"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G384_Predicted<- filter(df,Station=="G384") %>% mutate(Predicted=predict(data=.,G384_model, Time, se = FALSE))}
+  G384_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G384"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G384_Predicted<- filter(df,Station=="G384") %>% mutate(Predicted=predict(data=.,G384_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G384_model, Time, se = TRUE)$se.fit)}
+  else {G384_Predicted<- filter(df,Station=="G384") %>% mutate(Predicted=NA,SE=NA)}
   
   if(nrow(filter(df,Station=="G379"))>min_obs) {
-  G379_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G379"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G379_Predicted<- filter(df,Station=="G379") %>% mutate(Predicted=predict(data=.,G379_model, Time, se = FALSE))}
+  G379_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G379"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G379_Predicted<- filter(df,Station=="G379") %>% mutate(Predicted=predict(data=.,G379_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G379_model, Time, se = TRUE)$se.fit)}
+  else {G379_Predicted<- filter(df,Station=="G379") %>% mutate(Predicted=NA,SE=NA)}
   
   if(nrow(filter(df,Station=="G380"))>min_obs) {
-  G380_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G380"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G380_Predicted<- filter(df,Station=="G380") %>% mutate(Predicted=predict(data=.,G380_model, Time, se = FALSE))}
+  G380_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G380"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G380_Predicted<- filter(df,Station=="G380") %>% mutate(Predicted=predict(data=.,G380_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G380_model, Time, se = TRUE)$se.fit)}
+  else {G380_Predicted<- filter(df,Station=="G380") %>% mutate(Predicted=NA,SE=NA)}
   
   if(nrow(filter(df,Station=="G378"))>min_obs) {
-  G378_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G378"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G378_Predicted<- filter(df,Station=="G378") %>% mutate(Predicted=predict(data=.,G378_model, Time, se = FALSE))}
+  G378_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G378"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G378_Predicted<- filter(df,Station=="G378") %>% mutate(Predicted=predict(data=.,G378_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G378_model, Time, se = TRUE)$se.fit)}
+  else {G378_Predicted<- filter(df,Station=="G378") %>% mutate(Predicted=NA,SE=NA)}
   
   if(nrow(filter(df,Station=="G377"))>min_obs) {
-  G377_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G377"),span = span_width,method.args = list(family = "gaussian",degree=2))
-  G377_Predicted<- filter(df,Station=="G377") %>% mutate(Predicted=predict(data=.,G377_model, Time, se = FALSE))}
+  G377_model <- loess(Diff_24_hour_mean ~ Time, filter(df,Station=="G377"),span = span_width,method.args = list(family = "symmetric",degree=2,iterations=4))
+  G377_Predicted<- filter(df,Station=="G377") %>% mutate(Predicted=predict(data=.,G377_model, Time, se = FALSE)) %>% mutate(SE=predict(data=.,G377_model, Time, se = TRUE)$se.fit)}
+  else {G377_Predicted<- filter(df,Station=="G377") %>% mutate(Predicted=NA,SE=NA)}
   
-  Model_predictions <- data.frame(`Flowway`=as.character(),`Flowpath Region`=as.character(),Station=as.character(),Time=as.numeric(),Diff_24_hour_mean=as.numeric(),`variable`=as.character(),Predicted=as.numeric())
+  Model_predictions <- data.frame(`Flowway`=as.character(),`Flowpath Region`=as.character(),Station=as.character(),Time=as.numeric(),Diff_24_hour_mean=as.numeric(),`variable`=as.character(),Predicted=as.numeric(),SE=as.numeric())
   
   if(exists("G377_Predicted")) {Model_predictions <-rbind(Model_predictions,G377_Predicted)} 
   if(exists("G333_Predicted")) {Model_predictions <-rbind(Model_predictions,G333_Predicted)} 
@@ -206,7 +216,8 @@ LOESS_Extract_Parameters <- function(df)
               Max=as.numeric(format(max(max,na.rm =TRUE),scientific=FALSE)),
               `Min`=as.numeric(format(min(min,na.rm=TRUE),scientific = FALSE)),
               `Max Time`=paste(sep = "",as.character(trunc(max(`Max Time`,na.rm = TRUE))),":",as.character(formatC(max(`Max Time`,na.rm=TRUE)%%1*60,width = 2, format = "d", flag = "0"))),
-              `Min Time`=paste(sep = "",as.character(trunc(min(`Min Time`,na.rm = TRUE))),":",as.character(formatC(min(`Min Time`,na.rm = TRUE)%%1*60,width = 2, format = "d", flag = "0")))) %>%
+              `Min Time`=paste(sep = "",as.character(trunc(min(`Min Time`,na.rm = TRUE))),":",as.character(formatC(min(`Min Time`,na.rm = TRUE)%%1*60,width = 2, format = "d", flag = "0"))),
+              `Mean SE`=mean(SE,na.rm=TRUE)) %>%
     mutate(Amplitude=as.numeric(format(as.numeric(Max)-as.numeric(`Min`),scientific = FALSE))) %>%
     mutate(across(where(is.numeric),~round(.,3))) %>%
     mutate(Model="LOESS")
@@ -214,10 +225,10 @@ LOESS_Extract_Parameters <- function(df)
 
 
 
-# Filter Data Set by Environmental Conditions -----Step 3------------------------
+# Filter Data Set by Environmental Conditions -----Step 3  LOESS and GAM------------------------
 
 Span_width <-0.5  #With of span in LOESS model
-Min_Obs <-50 #Minimum observations required for data to be modelled 
+Min_Obs <-50 #Minimum observations required for data to be modeled 
 
 All_Observations <- rbind(RPAS_extra_time %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),RPAS_extra_time %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="All Observations")
 
@@ -274,6 +285,62 @@ Cont_outflow_days <- rbind(Complete_outflow_days %>% GAM_MODEL(.,Min_Obs ) %>% G
 #continous inflow and outflow
 Cont_flow_days <- rbind(Complete_flow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_flow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Inflow and Outflow")
 
+# Filter Data Set by Environmental Conditions -----Step 3-------LOESS only------------
+
+
+Span_width <-0.5  #With of span in LOESS model
+Min_Obs <-50 #Minimum observations required for data to be modeled 
+
+All_Observations <- RPAS_extra_time %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="All Observations")
+
+test<-  RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Inflow Stage`) %>% filter(`Max Daily Inflow Stage`=="10.5-11 Max Daily Stage ft") %>% group_by(Station) %>% summarise(n=n())
+
+#Inflow Stage
+Inflow_Stage_10_11 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Inflow Stage`) %>% filter(`Max Daily Inflow Stage`=="10.5-11 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="10.5-11 Max Daily Inflow Stage ft")
+Inflow_Stage_11_12 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Inflow Stage`) %>% filter(`Max Daily Inflow Stage`=="11-12 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters()  %>% mutate(`Condition`="11-12 Max Daily Inflow Stage ft")
+Inflow_Stage_12_13 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Inflow Stage`) %>% filter(`Max Daily Inflow Stage`=="12-13 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters()  %>% mutate(`Condition`="12-13 Max Daily Inflow Stage ft")
+Inflow_Stage_13 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Inflow Stage`) %>% filter(`Max Daily Inflow Stage`=="13+ Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters()  %>% mutate(`Condition`="13+ Max Daily Inflow Stage ft")
+
+Inflow_Stage_All <- rbind(Inflow_Stage_10_11,Inflow_Stage_11_12) %>% rbind(Inflow_Stage_12_13) %>% rbind(Inflow_Stage_13)
+
+#Outflow Stage
+Outflow_Stage_0 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Outflow Stage`) %>% filter(`Max Daily Outflow Stage`=="< 10.5 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="< 10.5 Max Daily Outflow Stage ft")
+Outflow_Stage_1 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Outflow Stage`) %>% filter(`Max Daily Outflow Stage`=="10.5-11 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="10.5-11 Max Daily Outflow Stage ft")
+Outflow_Stage_2 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Outflow Stage`) %>% filter(`Max Daily Outflow Stage`=="11-12 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="11-12 Max Daily Outflow Stage ft")
+Outflow_Stage_3 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Outflow Stage`) %>% filter(`Max Daily Outflow Stage`=="12-13 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="12-13 Max Daily Outflow Stage ft")
+Outflow_Stage_4 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Outflow Stage`) %>% filter(`Max Daily Outflow Stage`=="13+ Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="13+ Max Daily Outflow Stage ft")
+
+Outflow_Stage_All <- rbind(Outflow_Stage_0,Outflow_Stage_1) %>% rbind(Outflow_Stage_2) %>% rbind(Outflow_Stage_3) %>% rbind(Outflow_Stage_4)
+
+#Inflow HLR Category
+#Inflow_HLR_Stage_3 <- rbind(RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Inflow HLR Category`) %>% filter(`Inflow HLR Category`=="Reverse Flow") %>% GAM_MODEL(.,Min_Obs) %>% GAM_Extract_Parameters(),RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Inflow HLR Category`) %>% filter(`Inflow HLR Category`=="Reverse Flow") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() ) %>% mutate(`Inflow HLR Category`="Reverse Flow")
+Inflow_HLR_Stage_0 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Inflow HLR Category`) %>% filter(`Inflow HLR Category`=="0-.1 (cm/day)") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Inflow 0-.1 (cm/day)")
+Inflow_HLR_Stage_1 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Inflow HLR Category`) %>% filter(`Inflow HLR Category`=="0.1-10 (cm/day)") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Inflow 0.1-10 (cm/day)")
+Inflow_HLR_Stage_2 <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Inflow HLR Category`) %>% filter(`Inflow HLR Category`=="10+ (cm/day)") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Inflow 10+ (cm/day)")
+
+Inflow_HLR_All <- rbind(Inflow_HLR_Stage_0,Inflow_HLR_Stage_1) %>% rbind(Inflow_HLR_Stage_2) #%>% rbind(Inflow_HLR_Stage_3)
+
+#Outflow HLR Category
+#Outflow_HLR_Stage_0 <- rbind(RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Outflow HLR Category`) %>% filter(`Outflow HLR Category`=="Reverse Flow") %>% GAM_MODEL(.,Min_Obs) %>% GAM_Extract_Parameters(),RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Outflow HLR Category`) %>% filter(`Outflow HLR Category`=="Reverse Flow") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() ) %>% mutate(`Outflow HLR Category`="Reverse Flow")
+Outflow_HLR_1 <-  RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Outflow HLR Category`) %>% filter(`Outflow HLR Category`=="0-.1 (cm/day)") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters()  %>% mutate(`Condition`="Outflow 0-.1 (cm/day)")
+Outflow_HLR_2 <-  RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Outflow HLR Category`) %>% filter(`Outflow HLR Category`=="0.1-10 (cm/day)") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters()  %>% mutate(`Condition`="Outflow 0.1-10 (cm/day)")
+Outflow_HLR_3 <-  RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Outflow HLR Category`) %>% filter(`Outflow HLR Category`=="10+ (cm/day)") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Outflow 10+ (cm/day)")
+
+Outflow_HLR_All <- rbind(Outflow_HLR_1,Outflow_HLR_2)  %>% rbind(Outflow_HLR_3)
+
+#Days of continuous flow
+Complete_inflow_days <-Complete_Days_extra_time %>% filter(`Continuous InFlow`=="TRUE")%>% filter (between(Time,0,24))
+Complete_outflow_days <-Complete_Days_extra_time %>% filter(`Continuous OutFlow`=="TRUE")%>% filter (between(Time,0,24))
+Complete_flow_days <-Complete_Days_extra_time %>% filter(`Continuous OutFlow`=="TRUE") %>% filter(`Continuous InFlow`=="TRUE") %>% filter (between(Time,0,24))
+
+#Continuous inflow
+Cont_inflow_days <- Complete_inflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Continuous Inflow")
+#continuous outflow
+Cont_outflow_days <- Complete_outflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Continuous Outflow")
+#continuous inflow and outflow
+Cont_flow_days <- Complete_flow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters() %>% mutate(`Condition`="Continuous Inflow and Outflow")
+
+
 1415+5440+2131+1901+3282+2788+2365+5700 #total
 979+5107+1378+1239+2045+1370+989+2318 #inflow
 738+3956+1040+860+1898+1434+1272+2899 #outflow
@@ -291,52 +358,54 @@ rbind(Outflow_Stage_All) %>%
 rbind(Inflow_HLR_All) %>% 
 rbind(Outflow_HLR_All)  
 
-write.csv(All_data_table,"Data/Extracted Model Parameters.csv",row.names=FALSE)
+write.csv(All_data_table,"Data/Extracted Model Parameters added SE.csv",row.names=FALSE)
 
 #Publication format table STA2 LOESS
 STA2_LOESS_table <- All_data_table %>%
 ungroup() %>%  
-select(Station,Amplitude,Condition, n,`Min Time`,`Max Time`,Model) %>%  
+select(Station,Amplitude,Condition, n,`Min Time`,`Max Time`,`Mean SE`,Model) %>%  
 filter(Station %in% c("G333","G334"),Model=="LOESS") %>%
 select(-Model)  %>% 
-pivot_wider(names_from = Station, values_from = c(n,Amplitude, `Min Time`,`Max Time`)) %>%
-select(Condition,n_G333,Amplitude_G333,`Min Time_G333`,`Max Time_G333`,n_G334,Amplitude_G334,`Min Time_G334`,`Max Time_G334`)
+pivot_wider(names_from = Station, values_from = c(n,Amplitude, `Min Time`,`Max Time`,`Mean SE`)) %>%
+select(Condition,n_G333,Amplitude_G333,`Min Time_G333`,`Max Time_G333`,`Mean SE_G333`,n_G334,Amplitude_G334,`Min Time_G334`,`Max Time_G334`,`Mean SE_G334`)
 
 write.csv(STA2_LOESS_table,"Data/STA-2 Model Pub LOESS Table.csv",row.names=FALSE)
 
 #Publication format table STA34 central FW LOESS
 STA34_FW2_LOESS_table <- All_data_table %>%
 ungroup() %>%  
-select(Station,Amplitude,Condition, n,`Min Time`,`Max Time`,Model) %>%  
+select(Station,Amplitude,Condition, n,`Min Time`,`Max Time`,`Mean SE`,Model) %>%  
 filter(Station %in% c("G377","G378","G379"),Model=="LOESS") %>%
 select(-Model)  %>% 
-pivot_wider(names_from = Station, values_from = c(n,Amplitude, `Min Time`,`Max Time`)) %>%
-select(Condition,n_G377,Amplitude_G377,`Min Time_G377`,`Max Time_G377`,n_G378,Amplitude_G378,`Min Time_G378`,`Max Time_G378`,n_G379,Amplitude_G379,`Min Time_G379`,`Max Time_G379`)
+pivot_wider(names_from = Station, values_from = c(n,Amplitude, `Min Time`,`Max Time`,`Mean SE`)) %>%
+select(Condition,n_G377,Amplitude_G377,`Min Time_G377`,`Max Time_G377`,`Mean SE_G377`,n_G378,Amplitude_G378,`Min Time_G378`,`Max Time_G378`,`Mean SE_G378`,n_G379,Amplitude_G379,`Min Time_G379`,`Max Time_G379`,`Mean SE_G379`)
   
 write.csv(STA34_FW2_LOESS_table,"Data/STA-34 FW Central Model Pub LOESS Table.csv",row.names=FALSE)
 
 #Publication format table STA34 Western LOESS
 STA34_FW3_LOESS_table <- All_data_table %>%
 ungroup() %>%  
-select(Station,Amplitude,Condition, n,`Min Time`,`Max Time`,Model) %>%  
+select(Station,Amplitude,Condition, n,`Min Time`,`Max Time`,`Mean SE`,Model) %>%  
 filter(Station %in% c("G380","G384","G381"),Model=="LOESS") %>%
 select(-Model)  %>% 
-pivot_wider(names_from = Station, values_from = c(n,Amplitude, `Min Time`,`Max Time`)) %>%
-select(Condition,n_G380,Amplitude_G380,`Min Time_G380`,`Max Time_G380`,n_G384,Amplitude_G384,`Min Time_G384`,`Max Time_G384`,n_G381,Amplitude_G381,`Min Time_G381`,`Max Time_G381`)
+pivot_wider(names_from = Station, values_from = c(n,Amplitude, `Min Time`,`Max Time`,`Mean SE`)) %>%
+select(Condition,n_G380,Amplitude_G380,`Min Time_G380`,`Max Time_G380`,`Mean SE_G380`,n_G384,Amplitude_G384,`Min Time_G384`,`Max Time_G384`,`Mean SE_G384`,n_G381,Amplitude_G381,`Min Time_G381`,`Max Time_G381`,`Mean SE_G381`)
 
 write.csv(STA34_FW3_LOESS_table,"Data/STA-34 FW West Model Pub LOESS Table.csv",row.names=FALSE)
 
 # Publication Plots -------------------------------------------------------
 
+fig_2_fit<- LOESS_MODEL(RPAS_extra_time,Span_width,Min_Obs)
+
 #LOESS Visualized All Stations Figure #2
-ggplot(RPAS_extra_time,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-geom_line(data =LOESS_MODEL(RPAS_extra_time,Span_width,Min_Obs),aes(Time,`LOESS Prediction`) ,color="black",size=1)+
+ggplot(RPAS_extra_time,aes(Time,Diff_24_hour_mean,color=Station))+
+geom_ribbon(data =fig_2_fit,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Prediction`-SE),color="grey80",size=1,fill="grey80")+geom_point(shape=1,alpha=.5)+
+geom_line(data =fig_2_fit,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
 labs(y="Deviation from daily mean (P ug/L)",x="Hour")
 
 ggsave("Figures/Pub Fig 2- Hourly TP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 8, height = 4, units = "in", dpi = 300, limitsize = TRUE)
-
 
 #Inflow Stage combine model predictions 
 Inflow_Stage_10_11_fig <- RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Station,Time,Diff_24_hour_mean,`Max Daily Inflow Stage`) %>% filter(`Max Daily Inflow Stage`=="10.5-11 Max Daily Stage ft") %>% LOESS_MODEL(.,Span_width,Min_Obs) %>%  mutate(`Condition`="10.5-11 Max Daily Inflow Stage ft")
@@ -348,7 +417,8 @@ Inflow_Stage_All_fig <- rbind(Inflow_Stage_10_11_fig,Inflow_Stage_11_12_fig) %>%
 
 #LOESS Visualized All Stations SI #1
 ggplot(Inflow_Stage_All_fig,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-geom_line(aes(Time,`LOESS Prediction`) ,color="black",size=1)+
+geom_ribbon(data =Inflow_Stage_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Prediction`-SE),color="grey80",size=1,fill="grey80")+geom_point(shape=1,alpha=.5)+
+geom_line(data =Inflow_Stage_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+  
 facet_grid(`Max Daily Inflow Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
 labs(y="Deviation from daily mean (P ug/L)",x="Hour")
@@ -365,8 +435,9 @@ Outflow_Stage_4_fig <-  RPAS_extra_time %>% select(Flowway,`Flowpath Region`,Sta
 Outflow_Stage_All_fig <- rbind(Outflow_Stage_0_fig,Outflow_Stage_1_fig) %>% rbind(Outflow_Stage_2_fig) %>% rbind(Outflow_Stage_3_fig) %>% rbind(Outflow_Stage_4_fig)
 
 #LOESS Visualized All Stations SI #2
-ggplot(Outflow_Stage_All_fig ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-geom_line(aes(Time,`LOESS Prediction`) ,color="black",size=1)+
+ggplot(Outflow_Stage_All_fig ,aes(Time,Diff_24_hour_mean,color=Station))+
+geom_ribbon(data =Outflow_Stage_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Prediction`-SE),color="grey80",size=1,fill="grey80")+geom_point(shape=1,alpha=.5)+
+geom_line(data =Outflow_Stage_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Max Daily Outflow Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
 labs(y="Deviation from daily mean (P ug/L)",x="Hour")
@@ -383,7 +454,8 @@ Inflow_HLR_All_fig <- rbind(Inflow_HLR_Stage_0_fig,Inflow_HLR_Stage_1_fig) %>% r
 
 #LOESS Visualized All Stations SI #3
 ggplot(Inflow_HLR_All_fig ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-geom_line(aes(Time,`LOESS Prediction`) ,color="black",size=1)+
+geom_ribbon(data =Inflow_HLR_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Prediction`-SE),color="grey80",size=1,fill="grey80")+geom_point(shape=1,alpha=.5)+
+geom_line(data =Inflow_HLR_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Inflow HLR Category`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
 labs(y="Deviation from daily mean (P ug/L)",x="Hour")
@@ -399,7 +471,8 @@ Outflow_HLR_All_fig <- rbind(Outflow_HLR_1_fig,Outflow_HLR_2_fig)  %>% rbind(Out
 
 #LOESS Visualized All Stations SI #4
 ggplot(Outflow_HLR_All_fig ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-geom_line(aes(Time,`LOESS Prediction`) ,color="black",size=1)+
+geom_ribbon(data =Outflow_HLR_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Prediction`-SE),color="grey80",size=1,fill="grey80")+geom_point(shape=1,alpha=.5)+
+geom_line(data =Outflow_HLR_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Outflow HLR Category`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
 labs(y="Deviation from daily mean (P ug/L)",x="Hour")
@@ -417,27 +490,27 @@ Cont_flow_days_all_fig <- rbind(Cont_inflow_days_fig,Cont_outflow_days_fig)  %>%
 
 #LOESS Visualized All Stations SI #5
 ggplot(Cont_flow_days_all_fig ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-geom_line(aes(Time,`LOESS Prediction`) ,color="black",size=1)+
+geom_ribbon(data =Cont_flow_days_all_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Prediction`-SE),color="grey80",size=1,fill="grey80")+geom_point(shape=1,alpha=.5)+
+geom_line(data =Cont_flow_days_all_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Condition`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
 labs(y="Deviation from daily mean (P ug/L)",x="Hour")
 
 ggsave("Figures/Pub SI 5- Hourly TP Variation from the Daily Mean by Station and continuous flow Condition.jpeg", plot = last_plot(), width = 8, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
+#LOESS Visualized All Stations by month SI #6 (need LOESS predictions by month)
+ggplot(RPAS_extra_time ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
+geom_smooth(color="black",method = "loess",span=0.5,method.args = list(family = "symmetric",degree=2,iterations=4))+  
+facet_grid(Station~Month)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+scale_x_continuous(breaks = seq(0,24,4))+
+coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
+labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+
+ggsave("Figures/Pub SI 6- Hourly TP Variation from the Daily Mean by Station and Month.jpeg", plot = last_plot(), width = 8, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
 
 
 
 # Test --------------------------------------------------------------------
-
-#LOESS Visualized All Stations by month SI #6 (need LOESS predictions by month)
-ggplot(RPAS_extra_time ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+
-  #geom_line(aes(Time,`LOESS Prediction`) ,color="black",size=1)+
-  geom_smooth(color="black",method = "loess",span=0.5)+  
-  facet_grid(Station~Month)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+scale_x_continuous(breaks = seq(0,24,4))+
-  coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-  labs(y="Deviation from daily mean (P ug/L)",x="Hour")
-
-ggsave("Figures/Pub SI 5- Hourly TP Variation from the Daily Mean by Station and continuous flow Condition.jpeg", plot = last_plot(), width = 8, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 
 #LOESS Visualized All Stations no flow SI #7 (need LOESS predictions)
