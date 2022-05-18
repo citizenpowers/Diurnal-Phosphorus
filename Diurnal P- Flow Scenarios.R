@@ -11,6 +11,9 @@ library(tidyr)
 library(ggpmisc)
 library(zoo)
 library(viridis)
+library(Hmisc)
+library(boot)
+library(broom)
 
 citation("zoo")
 
@@ -27,112 +30,193 @@ Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Flow 
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv")
 
 
-# G334 continuous TP Load scenarios----------------------------------------------------
+# Outflow TP Load scenarios (Cumulative TP load and Flow by Date)----------------------------------------------------
 
 Days_with_TPO4 <- RPAs_Sorted %>%                  #DF with days of TP sample collection. 
 filter(`Flowpath Region`=="Outflow") %>%  
 group_by(`Flowway`,Date) %>%
-summarize(`Has Sample`=sum(!is.na(TPO4))) %>%
-filter(`Has Sample`>0)
+summarise(`Has Sample`=sum(!is.na(TPO4))) %>%
+filter(`Has Sample`>3)
 
-Outflow_TP_Load_Scenarios_1 <- Combined_BK_Flow  %>%
-left_join(filter(select(RPAs_Sorted,2:14),`Flowpath Region`=="Outflow") ,by=c("Date","Hour","Flowway")) %>% 
+Outflow_TP_Load_Scenarios_wide<- Combined_BK_Flow  %>%
+left_join(filter(select(RPAs_Sorted,2:14),`Flowpath Region`=="Outflow") ,by=c("Date","Hour","Flowway")) %>%   #join TP data to flow data
 group_by(Flowway)  %>%
 mutate(`Date_Time`=ymd_hms(ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York")),`TP interpolated`=TPO4) %>%   #create hourly date time index
-mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                
-mutate(`Hourly TP LOAD`=if_else(is.finite(Outflow),`TP interpolated`/1000*Outflow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Outflow Lagged 12 hours`=if_else(is.finite(lag(Outflow,12)),lag(Outflow,12),0),`Hourly TP Load Lagged 12 hours`=`TP interpolated`/1000*`Outflow Lagged 12 hours`*3600*28.31/1000000) %>%
+mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                                                    #Interpolate TP by hour
+#mutate(`Hourly TP LOAD`=if_else(is.finite(Outflow),`TP interpolated`/1000*Outflow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
 filter(is.finite(`TP interpolated`))   %>%
-semi_join(Days_with_TPO4,by=c("Date","Flowway")) %>%             #elimiante days from which no TP sample was collected
+semi_join(Days_with_TPO4,by=c("Date","Flowway")) %>%             #eliminate days from which no TP sample was collected. 
 group_by(Flowway,Date) %>%
-mutate(`Outflow 50% Day`=mean(Outflow,na.rm=TRUE)) %>%
-mutate(`Outflow 66% Day`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.666666666)) %>%  
-mutate(`Outflow 66% between 8pm-8am`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.66666666,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333)) %>%
-mutate(`Outflow 100% Night`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*0,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*2)) %>%
+#mutate(`Outflow 50% Day`=mean(Outflow,na.rm=TRUE)) %>%            #Distribute cumulative outflow evenly through day and night
+mutate(`Outflow 66% between 8pm-8am`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.6666666666,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333)) %>%
 mutate(`Outflow 100% between 8am-8pm`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*2,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*0)) %>% 
 mutate(`Outflow 75% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*18/4,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*6/20)) %>%
-mutate(`Outflow 50% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*3,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*12/20)) %>%
-mutate(`Outflow 100% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*6,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*0)) %>%
-mutate(`Outflow Inverse Diel P Pattern`=case_when(between(Hour,0,1)~mean(Outflow,na.rm=TRUE)*16/10,
-                                           between(Hour,2,3)~mean(Outflow,na.rm=TRUE)*14/10,
-                                           between(Hour,4,5)~mean(Outflow,na.rm=TRUE)*12/10,
-                                           between(Hour,6,7)~mean(Outflow,na.rm=TRUE)*10/10,
-                                           between(Hour,8,9)~mean(Outflow,na.rm=TRUE)*8/10,
-                                           between(Hour,10,11)~mean(Outflow,na.rm=TRUE)*6/10,
-                                           between(Hour,12,13)~mean(Outflow,na.rm=TRUE)*4/10,
-                                           between(Hour,14,15)~mean(Outflow,na.rm=TRUE)*6/10,
-                                           between(Hour,16,17)~mean(Outflow,na.rm=TRUE)*8/10,
-                                           between(Hour,18,19)~mean(Outflow,na.rm=TRUE)*10/10,
-                                           between(Hour,20,21)~mean(Outflow,na.rm=TRUE)*12/10,
-                                           between(Hour,22,23)~mean(Outflow,na.rm=TRUE)*14/10)) %>%
-mutate(`P Load`=if_else(is.finite(Outflow),`TP interpolated`/1000*Outflow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
-mutate(`Outflow 50% Day Load`=`TP interpolated`/1000*`Outflow 50% Day`*3600*28.31/1000000) %>%  
-mutate(`Outflow 66% Day Load`=`TP interpolated`/1000*`Outflow 66% Day`*3600*28.31/1000000) %>% 
-mutate(`Outflow 66% Night Load`=`TP interpolated`/1000*`Outflow 66% between 8pm-8am`*3600*28.31/1000000) %>%
-mutate(`Outflow 100% Night Load`=`TP interpolated`/1000*`Outflow 100% Night`*3600*28.31/1000000) %>%
-mutate(`Outflow 100% Day Load`=`TP interpolated`/1000*`Outflow 100% between 8am-8pm`*3600*28.31/1000000) %>%
-mutate(`Outflow 75% between 12-4AM Load`=`TP interpolated`/1000*`Outflow 75% between 12-4AM`*3600*28.31/1000000) %>%
-mutate(`Outflow 50% between 12-4AM Load`=`TP interpolated`/1000*`Outflow 50% between 12-4AM`*3600*28.31/1000000) %>%
-mutate(`Outflow 100% between 12-4AM Load`=`TP interpolated`/1000*`Outflow 100% between 12-4AM`*3600*28.31/1000000) %>%
-mutate(`Outflow Opposite Diel P Pattern Load`=`TP interpolated`/1000*`Outflow Inverse Diel P Pattern`*3600*28.31/1000000) %>%
+#mutate(`Outflow 100% Night`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*0,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*2)) %>%
+#mutate(`Outflow 66% Day`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.666666666)) %>%  #Distribute cumulative outflow 2/3 during day and 1/3 at night  
+#mutate(`Outflow 50% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*3,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*12/20)) %>%
+#mutate(`Outflow 100% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*6,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*0)) %>%
+#mutate(`Outflow Inverse Diel P Pattern`=case_when(between(Hour,0,1)~mean(Outflow,na.rm=TRUE)*16/10,
+#                                           between(Hour,2,3)~mean(Outflow,na.rm=TRUE)*14/10,
+#                                           between(Hour,4,5)~mean(Outflow,na.rm=TRUE)*12/10,
+#                                           between(Hour,6,7)~mean(Outflow,na.rm=TRUE)*10/10,
+#                                           between(Hour,8,9)~mean(Outflow,na.rm=TRUE)*8/10,
+#                                           between(Hour,10,11)~mean(Outflow,na.rm=TRUE)*6/10,
+#                                           between(Hour,12,13)~mean(Outflow,na.rm=TRUE)*4/10,
+#                                           between(Hour,14,15)~mean(Outflow,na.rm=TRUE)*6/10,
+#                                           between(Hour,16,17)~mean(Outflow,na.rm=TRUE)*8/10,
+#                                           between(Hour,18,19)~mean(Outflow,na.rm=TRUE)*10/10,
+#                                           between(Hour,20,21)~mean(Outflow,na.rm=TRUE)*12/10,
+#                                           between(Hour,22,23)~mean(Outflow,na.rm=TRUE)*14/10)) %>%
+mutate(`P Load`=if_else(is.finite(Outflow),`TP interpolated`*Outflow*3600*28.3168,0)) %>%  #ppb/1000mg/l*28.3168L/cf*60sec/min*60min/hour*1kg/1000g*1g/1000mg
+mutate(`Outflow 66% Night Load`=`TP interpolated`*`Outflow 66% between 8pm-8am`*3600*28.3168) %>%
+mutate(`Outflow 100% Day Load`=`TP interpolated`*`Outflow 100% between 8am-8pm`*3600*28.3168) %>%
+#mutate(`Outflow 100% Night Load`=`TP interpolated`*`Outflow 100% Night`*3600*28.3168) %>%
+#mutate(`Outflow 50% Day Load`=`TP interpolated`*`Outflow 50% Day`*3600*28.3168) %>%                             #Unused scenarios
+#mutate(`Outflow 66% Day Load`=`TP interpolated`*`Outflow 66% Day`*3600*28.3168) %>% 
+mutate(`Outflow 75% between 12-4AM Load`=`TP interpolated`*`Outflow 75% between 12-4AM`*3600*28.3168) %>%
+#mutate(`Outflow 50% between 12-4AM Load`=`TP interpolated`*`Outflow 50% between 12-4AM`*3600*28.3168) %>%
+#mutate(`Outflow 100% between 12-4AM Load`=`TP interpolated`*`Outflow 100% between 12-4AM`*3600*28.3168) %>%
+#mutate(`Outflow Opposite Diel P Pattern Load`=`TP interpolated`*`Outflow Inverse Diel P Pattern`*3600*28.3168) %>%
 group_by(Flowway) %>%
-mutate(`Cumulative Flow`=cumsum(`Outflow`)) %>%
-mutate(`Cumulative Flow Outflow 75% between 12-4AM`=cumsum(`Outflow 75% between 12-4AM`)) %>%  
-mutate(`Cumulative Flow Opposite Diel P Pattern`=cumsum(`Outflow Inverse Diel P Pattern`)) %>%  
-mutate(`Measured flow (Baseline)`=cumsum(`P Load`)) %>%
+mutate(`Cumulative Flow`=cumsum(`Outflow`*3600*28.3168)) %>% #Cumulative outflows- Check if cumulative outflows are the same for every scenario 
+mutate(`Cumulative Flow 100% 8am to 8pm`=cumsum(`Outflow 100% between 8am-8pm`*3600*28.3168)) %>% 
+mutate(`Cumulative Flow 8pm-8am`=cumsum(`Outflow 66% between 8pm-8am`*3600*28.3168)) %>%  
+mutate(`Cumulative Flow Outflow 75% between 12-4AM`=cumsum(`Outflow 75% between 12-4AM`*3600*28.3168)) %>%   
+#mutate(`Cumulative Flow 50% day`=cumsum(`Outflow 50% Day`)) %>%                                   
+#mutate(`Cumulative Flow 66% day`=cumsum(`Outflow 66% Day`)) %>%  
+#mutate(`Cumulative Flow 100% night`=cumsum(`Outflow 100% Night`)) %>%
+#mutate(`Cumulative Flow Opposite Diel P Pattern`=cumsum(`Outflow Inverse Diel P Pattern`)) %>% 
+mutate(`Cumulative P Load (Baseline)`=cumsum(`P Load`)) %>%  
+mutate(`Cumulative P Load 8pm-8am`=cumsum(`Outflow 66% Night Load`)) %>%
+mutate(`Cumulative P Load 8am-8pm`=cumsum(`Outflow 100% Day Load`))  %>%  
+mutate(`Cumulative P Load between 12-4AM`=cumsum(`Outflow 75% between 12-4AM Load`)) %>% 
 #mutate(`Cumulative P Load 50% Day`=cumsum(`Outflow 50% Day Load`)) %>%
 #mutate(`Cumulative P Load 66% Day`=cumsum(`Outflow 66% Day Load`)) %>%
-mutate(`66% flow between 10pm-7am`=cumsum(`Outflow 66% Night Load`)) %>%
-#mutate(`Cumulative P Load 100% Night`=cumsum(`Outflow 100% Night Load`)) %>%
-mutate(`75% flow between 12-4AM`=cumsum(`Outflow 75% between 12-4AM Load`)) %>%  
+#mutate(`Cumulative P Load 100% Night`=cumsum(`Outflow 100% Night Load`)) %>%  
 #mutate(`Cumulative P 50% between 12-4AM`=cumsum(`Outflow 50% between 12-4AM Load`)) %>%  
 #mutate(`Cumulative P 100% between 12-4AM`=cumsum(`Outflow 100% between 12-4AM Load`)) %>%  
-mutate(`Inverse Diel P Pattern Flow`=cumsum(`Outflow Opposite Diel P Pattern Load`))  %>%  
-mutate(`100% flow between 8am-9pm`=cumsum(`Outflow 100% Day Load`))  %>%
-pivot_longer(`Measured flow (Baseline)`:`100% flow between 8am-9pm`,names_to = "Scenario", values_to = "Value") %>%
-mutate(`Scenario`=factor(`Scenario`,levels = c("100% flow between 8am-9pm", "Measured flow (Baseline)", "66% flow between 10pm-7am","Inverse Diel P Pattern Flow","75% flow between 12-4AM")))
+#mutate(`Inverse Diel P Pattern Flow`=cumsum(`Outflow Opposite Diel P Pattern Load`))  %>% 
+select(-`Outflow HLR`, -Inflow,-`Inflow HLR`,-TRP,-Month,-Day,-Time,-Year,-Minute,-date) 
 
 
-Mean_Flow_by_hour <-Outflow_TP_Load_Scenarios_1 %>%
-group_by(Flowway,Hour) %>%
-summarise(n=n(),`Hourly Flow 100% night`=mean(`Outflow 100% Night`,na.rm=TRUE),
-`Hourly Flow 66% day`=mean(`Outflow 66% Day Load`,na.rm=TRUE),
-`Hourly Flow 66% night`=mean(`Outflow 66% between 8pm-8am`,na.rm=TRUE))
+# Estimated FWM TP using cumulative TP load and cumaltive flow ------------
+
+#Calculate FWM using the cumulative sum of rowwise calculations
+Calculated_FWM <-Outflow_TP_Load_Scenarios_wide %>%
+mutate(`Baseline FWM`=`Cumulative P Load (Baseline)`/`Cumulative Flow`,`FWM Cumulative Flow 100% 8am to 8pm`=`Cumulative P Load 8am-8pm`/`Cumulative Flow 100% 8am to 8pm`,
+`FWM 66% flow between 10pm-8am`=`Cumulative P Load 8pm-8am`/`Cumulative Flow 8pm-8am`,`FWM 75% flow between 12am-4am`=`Cumulative P Load between 12-4AM`/`Cumulative Flow Outflow 75% between 12-4AM`)
+
+#Cumulative TP load by scenario long format for plots
+Outflow_TP_Load_Scenarios_long <- Outflow_TP_Load_Scenarios_wide %>%
+pivot_longer(`Cumulative P Load (Baseline)`:`Cumulative P Load between 12-4AM`,names_to = "Scenario", values_to = "Value") %>%
+mutate(`Scenario`=factor(`Scenario`,levels = c("Cumulative P Load 8am-8pm", "Cumulative P Load (Baseline)", "Cumulative P Load 8pm-8am","Cumulative P Load between 12-4AM")))
+
+#Calculated FWM from rowwise calculations
+flow_weighted_mean <- Outflow_TP_Load_Scenarios_long %>%
+group_by(Flowway,Scenario) %>%
+summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE),`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE),`Cumulative Flow (acre-ft)`=`Cumulative Flow (L)`/1233000,`FWM Concentration (ug/L)`=`Cumulative P Load (kg)`/`Cumulative Flow (L)`,n=sum(!is.na(Value)),sd=sd(`Value`/`Cumulative Flow (L)`,na.rm = TRUE),se=sd/sqrt(n))
+
+write.csv(flow_weighted_mean,"./Data/FWM_Rowwise_Estimates.csv")
 
 
-Complete_days <- Outflow_TP_Load_Scenarios_1 %>%                  #find complete days
-group_by(`Flowway`,Date,Scenario) %>%
-summarize(`Total Hours`=sum(!is.na(Hour))) %>%
-filter(`Total Hours`==24)
+# bootstrap CI and SE of Flow Weighted Mean -------------------------------
 
-Outflow_TP_Load_Scenarios <- Outflow_TP_Load_Scenarios_1 %>%   #remove incomplete days
-semi_join(Complete_days ,by=c("Date","Flowway","Scenario")) 
+#Function to calculate FWM
+samplewmean <- function(data, d) {
+  return(weighted.mean(x=data[d,2], w=data[d,1],normwt = TRUE)) 
+}
 
-write.csv(Outflow_TP_Load_Scenarios,"./Data/Outflow_TP_Load_Scenarios.csv")
 
-days_in_scenario <- Outflow_TP_Load_Scenarios %>%
-group_by(Flowway,Date) %>%
-summarise(`has TP sample`=sum(!is.na(TPO4))) %>%
+Flow_Weighted_Mean <- function(data, d) {
+n <-nrow(data)
+Flow <- data[d,1]
+TP_interpolated <- data[d,2]
+TP_Load <- sum(Flow*TP_interpolated*3600*28.3168)
+Flow_total <- sum(Flow*3600*28.3168)
+FWM<- TP_Load/Flow_total
+output <- list("FWM"=FWM)
+return(output)
+}
+
+#set seed for reproducibility 
+
+set.seed(1000)
+#STA2 
+STA2_DF <- Outflow_TP_Load_Scenarios_wide %>% filter(Flowway=="STA-2 Central")  #create DF for STA2 FW3
+  
+#Bootstrap SE and CI 
+STA2_Baseline <- mutate(tidy(boot(data=STA2_DF[,c(4,9)], statistic = samplewmean, R=1000),conf.int = TRUE),Scenario="Baseline")
+STA2_66_night  <-mutate(tidy(boot(data=STA2_DF[,c(10,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8pm-8am ")
+STA2_100_day  <-mutate(tidy(boot(data=STA2_DF[,c(11,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="100% Flow between 8am-8pm")
+STA2_75_12am_4am <-mutate(tidy(boot(data=STA2_DF[,c(12,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="75% Flow between 12am-4am")
+
+#combine parameter estimates in DF
+STA2_Stats <-mutate(rbind(STA2_Baseline,STA2_66_night,STA2_100_day,STA2_75_12am_4am),Flowway="STA-2 Central")
+
+#STA34 Central
+STA34C_DF <- Outflow_TP_Load_Scenarios_wide %>%  #create DF for STA34 FW central
+filter(Flowway=="STA-3/4 Central")
+
+#Bootstrap SE and CI 
+STA34C_Baseline <- mutate(tidy(boot(data=STA34C_DF[,c(4,9)], statistic = samplewmean, R=1000),conf.int = TRUE),Scenario="Baseline")
+STA34C_66_night  <-mutate(tidy(boot(data=STA34C_DF[,c(10,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8pm-8am ")
+STA34C_100_day  <-mutate(tidy(boot(data=STA34C_DF[,c(11,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="100% Flow between 8am-8pm")
+STA34C_75_12am_4am <-mutate(tidy(boot(data=STA34C_DF[,c(12,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="75% Flow between 12am-4am")
+
+#combine parameter estimates in DF
+STA34C_Stats <-mutate(rbind(STA34C_Baseline,STA34C_66_night,STA34C_100_day,STA34C_75_12am_4am),Flowway="STA-34 Central")
+
+#STA34 Western
+STA34W_DF <- Outflow_TP_Load_Scenarios_wide %>%  #create DF for STA34 FW Western
+filter(Flowway=="STA-3/4 Western")
+
+#Bootstrap SE and CI 
+STA34W_Baseline <- mutate(tidy(boot(data=STA34W_DF[,c(4,9)], statistic = samplewmean, R=1000),conf.int = TRUE),Scenario="Baseline")
+STA34W_66_night  <-mutate(tidy(boot(data=STA34W_DF[,c(10,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8pm-8am ")
+STA34W_100_day  <-mutate(tidy(boot(data=STA34W_DF[,c(11,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="100% Flow between 8am-8pm")
+STA34W_75_12am_4am <-mutate(tidy(boot(data=STA34W_DF[,c(12,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="75% Flow between 12am-4am")
+
+#combine parameter estimates in DF
+STA34W_Stats <-mutate(rbind(STA34W_Baseline,STA34W_66_night,STA34W_100_day,STA34W_75_12am_4am),Flowway="STA-34 Western")
+
+#Combine bootstrap estimates from all flowways
+All_FWs_Stats <- rbind(STA34W_Stats,STA2_Stats,STA34C_Stats)
+
+#Save data from bootstrap estimates
+write.csv(All_FWs_Stats,"./Data/FWM estimates from bootstrap.csv")
+
+
+# Estimated SE using the HMISC package ------------------------------------
+
+#Function for calculated weighted SE from https://stats.stackexchange.com/questions/25895/computing-standard-error-in-weighted-mean-estimation
+weighted.var.se <- function(x, w, na.rm=FALSE)
+  #  Computes the variance of a weighted mean following Cochran 1977 definition
+{
+  if (na.rm) { w <- w[i <- !is.na(x)]; x <- x[i] }
+  n = length(w)
+  xWbar = weighted.mean(x,w,na.rm=na.rm)
+  wbar = mean(w)
+  out = n/((n-1)*sum(w)^2)*(sum((w*x-wbar*xWbar)^2)-2*xWbar*sum((w-wbar)*(w*x-wbar*xWbar))+xWbar^2*sum((w-wbar)^2))
+  return(out)
+}
+
+#Estimates of variance using Hmisc package
+weighted_mean_baseline <- Outflow_TP_Load_Scenarios_wide %>%
 group_by(Flowway) %>%
-summarise(n=n()) 
-
-flow_weighted_mean <- Outflow_TP_Load_Scenarios %>%
-group_by(Flowway,Scenario) %>%
-summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE),`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE)*27.31*60*60,`Cumulative Flow (acre-ft)`=`Cumulative Flow (L)`/1233000,`FWM Concentration (ug/L)`=`Cumulative P Load (kg)`/`Cumulative Flow (L)`*1000*1000*1000,n=sum(!is.na(Value)),sd=sd(`Value`/`Cumulative Flow (L)`*1000*1000*1000,na.rm = TRUE),se=sd/sqrt(n))
-
-write.csv(flow_weighted_mean,"./Data/Outflow_FWM_TP_Load_Scenarios_Summary.csv")
+summarise(`Baseline WM`=weighted.mean(`TP interpolated`,`Outflow`,na.rm=TRUE),`Baseline WVar`=wtd.var(`TP interpolated`,`Outflow`,na.rm=TRUE),`Baseline WSTdev`=sqrt(`Baseline WVar`),`Baseline WSE calc`= `Baseline WSTdev`/sqrt(n()),`Baseline WSE function`=weighted.var.se(`TP interpolated`,`Outflow`),
+            `100% Day WM`=weighted.mean(`TP interpolated`,`Outflow 100% between 8am-8pm`,na.rm=TRUE),`100% Day WVar`=wtd.var(`TP interpolated`,`Outflow 100% between 8am-8pm`,na.rm=TRUE),`100% Day WSTdev`=sqrt(`100% Day WVar`),`100% Day WSE calc`= `100% Day WSTdev`/sqrt(n()),`100% Day WSE function`=weighted.var.se(`TP interpolated`,`Outflow 100% between 8am-8pm`),
+            `66% Night WM`=weighted.mean(`TP interpolated`,`Outflow 66% between 8pm-8am`,na.rm=TRUE),`66% Night WVar`=wtd.var(`TP interpolated`,`Outflow 66% between 8pm-8am`,na.rm=TRUE),`66% Night WSTdev`=sqrt(`66% Night WVar`),`66% Night WSE calc`= `66% Night WSTdev`/sqrt(n()),`66% Night WSE function`=weighted.var.se(`TP interpolated`,`Outflow 66% between 8pm-8am`),
+            `75% 12-4 WM`=weighted.mean(`TP interpolated`,`Outflow 75% between 12-4AM`,na.rm=TRUE),`75% 12-4 WVar`=wtd.var(`TP interpolated`,`Outflow 75% between 12-4AM`,na.rm=TRUE),`75% 12-4 WSTdev`=sqrt(`75% 12-4 WVar`),`75% 12-4 WSE calc`= `75% 12-4 WSTdev`/sqrt(n()),`75% 12-4 WSE function`=weighted.var.se(`TP interpolated`,`Outflow 75% between 12-4AM`))
+            
 
 
-flow_weighted_mean_table <- flow_weighted_mean%>%
-pivot_wider(names_from = Scenario,values_from=`FWM Concentration (ug/L)`)  
+`Transposed Weighted Mean Table` <- as.data.frame(t(head(weighted_mean_baseline)))
 
-flow_weighted_mean_date <- Outflow_TP_Load_Scenarios %>%
-group_by(Flowway,Scenario,Date) %>%
-summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE),`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE)*27.31*60*60,`FWM Concentration (ug/L)`=`Cumulative P Load (kg)`/`Cumulative Flow (L)`*1000*1000*1000) 
+#Save data from HMISC estimates
+write.csv(`Transposed Weighted Mean Table`,"./Data/FWM estimates using HMISC.csv")
 
-flow_weighted_mean_date_summary <-flow_weighted_mean_date %>%
-group_by(Flowway,Scenario) %>%
-summarise(`FWM Concentration (ug/L)`=mean(`FWM Concentration (ug/L)`,na.rm=TRUE)) 
+
+
 
 
   
@@ -178,7 +262,23 @@ guides(shape = guide_legend(override.aes = list(color = "black")))
 ggsave("Figures/Example flow scenarios.jpeg", plot = last_plot(), width = 8, height = 6, units = "in", dpi = 300, limitsize = TRUE)
 
 
+#Histogram of STA34 Central FW
+hist(boot(data=STA34C_DF[,c(4,9)], statistic = samplewmean, R=1000)$t, xlab = "Statistic", main = "Bootstrap Distribution") 
+box()
+abline(v =boot(data=STA34C_DF[,c(4,9)], statistic = samplewmean, R=1000)$t0, lty = 2, col = "red")
 
+#Histogram of STA2 Central FW
+hist(boot(data=STA2_DF[,c(4,9)], statistic = samplewmean, R=1000)$t, xlab = "Statistic", main = "Bootstrap Distribution") 
+box()
+abline(v = boot(data=STA2_DF[,c(4,9)], statistic = samplewmean, R=1000)$t0, lty = 2, col = "red")
+
+#Histogram of STA34 western FW
+hist(Bootstrap_FWM_STA34W$t, xlab = "Statistic", main = "Bootstrap Distribution") 
+box()
+abline(v = Bootstrap_FWM_STA34W$t0, lty = 2, col = "red")
+
+#distribution of outflow data. Not normal
+ggplot(Outflow_TP_Load_Scenarios_wide,aes(`Outflow`,fill=Flowway))+geom_histogram()+facet_wrap(~Flowway)
   
 
 
