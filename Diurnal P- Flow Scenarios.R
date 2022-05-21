@@ -114,28 +114,31 @@ select(-`Outflow HLR`, -Inflow,-`Inflow HLR`,-TRP,-Month,-Day,-Time,-Year,-Minut
 #Make sure cumulative flow is the same for each scenario
 Cumulative_flow_check <- Outflow_TP_Load_Scenarios_wide %>%
 group_by(Flowway) %>%
-summarise(n=n(),`baseline flow`=sum(Outflow),`Outflow 100% between 8am-8pm`=sum(`Outflow 100% between 8am-8pm`),`Outflow 66% between 8pm-8am`=sum(`Outflow 66% between 8pm-8am`),`Outflow 75% between 12-4AM`=sum(`Outflow 75% between 12-4AM`),`Outflow 66% Day`=sum(`Outflow 66% Day`)) 
+summarise(`baseline flow`=sum(Outflow*3600*28.3168),`Outflow 100% between 8am-8pm`=sum(`Outflow 100% between 8am-8pm`*3600*28.3168),`Outflow 66% between 8pm-8am`=sum(`Outflow 66% between 8pm-8am`*3600*28.3168),`Outflow 75% between 12-4AM`=sum(`Outflow 75% between 12-4AM`*3600*28.3168),`Outflow 66% Day`=sum(`Outflow 66% Day`*3600*28.3168)) %>%
+mutate(across(where(is.numeric),~.x/1233000))  
 
+#Count number of days in scenario
+number_of_days <- Outflow_TP_Load_Scenarios_wide %>% group_by(Flowway) %>% distinct(Date) %>% summarise(n())
 
 # Estimated FWM TP using cumulative TP load and cumulative flow ------------
 
 #Calculate FWM using the cumulative sum of rowwise calculations
 Calculated_FWM <-Outflow_TP_Load_Scenarios_wide %>%
 mutate(`Baseline FWM`=`Cumulative P Load (Baseline)`/`Cumulative Flow`,`FWM Cumulative Flow 100% 8am to 8pm`=`Cumulative P Load 8am-8pm`/`Cumulative Flow 100% 8am to 8pm`,
-`FWM 66% flow between 10pm-8am`=`Cumulative P Load 8pm-8am`/`Cumulative Flow 8pm-8am`,`FWM 75% flow between 12am-4am`=`Cumulative P Load between 12-4AM`/`Cumulative Flow Outflow 75% between 12-4AM`)
+`FWM 66% flow between 8pm-8am`=`Cumulative P Load 8pm-8am`/`Cumulative Flow 8pm-8am`,`FWM 75% flow between 12am-4am`=`Cumulative P Load between 12-4AM`/`Cumulative Flow Outflow 75% between 12-4AM`,
+`FWM 66% flow between 8am-8pm`=`Cumulative P Load 66% Day`/`Cumulative Flow 66% day`)
 
 #Cumulative TP load by scenario long format for plots
 Outflow_TP_Load_Scenarios_long <- Outflow_TP_Load_Scenarios_wide %>%
-pivot_longer(`Cumulative P Load (Baseline)`:`Cumulative P Load between 12-4AM`,names_to = "Scenario", values_to = "Value") %>%
-mutate(`Scenario`=factor(`Scenario`,levels = c("Cumulative P Load 8am-8pm", "Cumulative P Load (Baseline)", "Cumulative P Load 8pm-8am","Cumulative P Load between 12-4AM")))
+pivot_longer(`Cumulative P Load (Baseline)`:`Cumulative P Load 66% Day`,names_to = "Scenario", values_to = "Value") %>%
+mutate(`Scenario`=factor(`Scenario`,levels = c("Cumulative P Load 8am-8pm","Cumulative P Load 66% Day","Cumulative P Load (Baseline)", "Cumulative P Load 8pm-8am","Cumulative P Load between 12-4AM")))
 
 #Calculated FWM from rowwise calculations
 flow_weighted_mean <- Outflow_TP_Load_Scenarios_long %>%
 group_by(Flowway,Scenario) %>%
-summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE),`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE),`Cumulative Flow (acre-ft)`=`Cumulative Flow (L)`/1233000,`FWM Concentration (ug/L)`=`Cumulative P Load (kg)`/`Cumulative Flow (L)`,n=sum(!is.na(Value)),sd=sd(`Value`/`Cumulative Flow (L)`,na.rm = TRUE),se=sd/sqrt(n))
+summarise(`Cumulative P Load (kg)`=max(Value,na.rm=TRUE)/1000000000,`Cumulative Flow (L)`=max(`Cumulative Flow`,na.rm=TRUE),`Cumulative Flow (acre-ft)`=`Cumulative Flow (L)`/1233000,`FWM Concentration (ug/L)`=max(Value,na.rm=TRUE)/`Cumulative Flow (L)`,n=sum(!is.na(Value)),sd=sd(`Value`/`Cumulative Flow (L)`,na.rm = TRUE),se=sd/sqrt(n))
 
 write.csv(flow_weighted_mean,"./Data/FWM_Rowwise_Estimates.csv")
-
 
 # bootstrap CI and SE of Flow Weighted Mean -------------------------------
 
