@@ -14,6 +14,7 @@ library(viridis)
 library(Hmisc)
 library(boot)
 library(broom)
+library(boot.pval)
 
 citation("zoo")
 
@@ -32,27 +33,39 @@ RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather 
 
 # Outflow TP Load scenarios (Cumulative TP load and Flow by Date)----------------------------------------------------
 
-Days_with_TPO4 <- RPAs_Sorted %>%                  #DF with days of TP sample collection. 
+#DF with days of TP sample collections of at least 4 samples. 
+Days_with_TPO4 <- RPAs_Sorted %>%                  
 filter(`Flowpath Region`=="Outflow") %>%  
 group_by(`Flowway`,Date) %>%
 summarise(`Has Sample`=sum(!is.na(TPO4))) %>%
 filter(`Has Sample`>3)
 
-Outflow_TP_Load_Scenarios_wide<- Combined_BK_Flow  %>%
+#create DF of TP interpolated by hour
+Outflow_TP_Load_Scenarios_wide1<- Combined_BK_Flow  %>%
 left_join(filter(select(RPAs_Sorted,2:14),`Flowpath Region`=="Outflow") ,by=c("Date","Hour","Flowway")) %>%   #join TP data to flow data
 group_by(Flowway)  %>%
 mutate(`Date_Time`=ymd_hms(ISOdate(year(Date),month(Date),day(Date),Hour,0,0,tz = "America/New_York")),`TP interpolated`=TPO4) %>%   #create hourly date time index
 mutate(`TP interpolated`=na.approx(`TP interpolated`,along=index(`Date_Time`),na.rm=FALSE))  %>%                                                    #Interpolate TP by hour
 #mutate(`Hourly TP LOAD`=if_else(is.finite(Outflow),`TP interpolated`/1000*Outflow*3600*28.31/1000000,0)) %>%  #ppb/1000mg/l*28.31L/cc*60sec/min*60min/hour*1kg/1000g*1g/1000mg  
 filter(is.finite(`TP interpolated`))   %>%
-semi_join(Days_with_TPO4,by=c("Date","Flowway")) %>%             #eliminate days from which no TP sample was collected. 
+semi_join(Days_with_TPO4,by=c("Date","Flowway"))             #eliminate days from which no TP sample was collected. 
+
+#DF of complete days. Only days with 24 hours of data
+Complete_days <-  Outflow_TP_Load_Scenarios_wide1 %>%
+group_by(`Flowway`,Date) %>%
+summarise(n= n()) %>%
+filter(n==24)
+
+#calculate hourly TP load and flow under different scenarios
+Outflow_TP_Load_Scenarios_wide<- Outflow_TP_Load_Scenarios_wide1  %>%  
+semi_join(Complete_days,by=c("Date","Flowway")) %>%  #filter
 group_by(Flowway,Date) %>%
 #mutate(`Outflow 50% Day`=mean(Outflow,na.rm=TRUE)) %>%            #Distribute cumulative outflow evenly through day and night
 mutate(`Outflow 66% between 8pm-8am`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.6666666666,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333)) %>%
 mutate(`Outflow 100% between 8am-8pm`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*2,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*0)) %>% 
 mutate(`Outflow 75% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*18/4,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*6/20)) %>%
+mutate(`Outflow 66% Day`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.666666666)) %>%  #Distribute cumulative outflow 2/3 during day and 1/3 at night  
 #mutate(`Outflow 100% Night`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*0,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*2)) %>%
-#mutate(`Outflow 66% Day`=case_when(between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*1.333333333,!between(Hour,8,19)~mean(Outflow,na.rm=TRUE)*.666666666)) %>%  #Distribute cumulative outflow 2/3 during day and 1/3 at night  
 #mutate(`Outflow 50% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*3,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*12/20)) %>%
 #mutate(`Outflow 100% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*6,!between(Hour,1,4)~mean(Outflow,na.rm=TRUE)*0)) %>%
 #mutate(`Outflow Inverse Diel P Pattern`=case_when(between(Hour,0,1)~mean(Outflow,na.rm=TRUE)*16/10,
@@ -70,10 +83,10 @@ mutate(`Outflow 75% between 12-4AM`=case_when(between(Hour,1,4)~mean(Outflow,na.
 mutate(`P Load`=if_else(is.finite(Outflow),`TP interpolated`*Outflow*3600*28.3168,0)) %>%  #ppb/1000mg/l*28.3168L/cf*60sec/min*60min/hour*1kg/1000g*1g/1000mg
 mutate(`Outflow 66% Night Load`=`TP interpolated`*`Outflow 66% between 8pm-8am`*3600*28.3168) %>%
 mutate(`Outflow 100% Day Load`=`TP interpolated`*`Outflow 100% between 8am-8pm`*3600*28.3168) %>%
+mutate(`Outflow 75% between 12-4AM Load`=`TP interpolated`*`Outflow 75% between 12-4AM`*3600*28.3168) %>%
+mutate(`Outflow 66% Day Load`=`TP interpolated`*`Outflow 66% Day`*3600*28.3168) %>% 
 #mutate(`Outflow 100% Night Load`=`TP interpolated`*`Outflow 100% Night`*3600*28.3168) %>%
 #mutate(`Outflow 50% Day Load`=`TP interpolated`*`Outflow 50% Day`*3600*28.3168) %>%                             #Unused scenarios
-#mutate(`Outflow 66% Day Load`=`TP interpolated`*`Outflow 66% Day`*3600*28.3168) %>% 
-mutate(`Outflow 75% between 12-4AM Load`=`TP interpolated`*`Outflow 75% between 12-4AM`*3600*28.3168) %>%
 #mutate(`Outflow 50% between 12-4AM Load`=`TP interpolated`*`Outflow 50% between 12-4AM`*3600*28.3168) %>%
 #mutate(`Outflow 100% between 12-4AM Load`=`TP interpolated`*`Outflow 100% between 12-4AM`*3600*28.3168) %>%
 #mutate(`Outflow Opposite Diel P Pattern Load`=`TP interpolated`*`Outflow Inverse Diel P Pattern`*3600*28.3168) %>%
@@ -82,24 +95,29 @@ mutate(`Cumulative Flow`=cumsum(`Outflow`*3600*28.3168)) %>% #Cumulative outflow
 mutate(`Cumulative Flow 100% 8am to 8pm`=cumsum(`Outflow 100% between 8am-8pm`*3600*28.3168)) %>% 
 mutate(`Cumulative Flow 8pm-8am`=cumsum(`Outflow 66% between 8pm-8am`*3600*28.3168)) %>%  
 mutate(`Cumulative Flow Outflow 75% between 12-4AM`=cumsum(`Outflow 75% between 12-4AM`*3600*28.3168)) %>%   
+mutate(`Cumulative Flow 66% day`=cumsum(`Outflow 66% Day`*3600*28.3168)) %>%  
 #mutate(`Cumulative Flow 50% day`=cumsum(`Outflow 50% Day`)) %>%                                   
-#mutate(`Cumulative Flow 66% day`=cumsum(`Outflow 66% Day`)) %>%  
 #mutate(`Cumulative Flow 100% night`=cumsum(`Outflow 100% Night`)) %>%
 #mutate(`Cumulative Flow Opposite Diel P Pattern`=cumsum(`Outflow Inverse Diel P Pattern`)) %>% 
 mutate(`Cumulative P Load (Baseline)`=cumsum(`P Load`)) %>%  
 mutate(`Cumulative P Load 8pm-8am`=cumsum(`Outflow 66% Night Load`)) %>%
 mutate(`Cumulative P Load 8am-8pm`=cumsum(`Outflow 100% Day Load`))  %>%  
 mutate(`Cumulative P Load between 12-4AM`=cumsum(`Outflow 75% between 12-4AM Load`)) %>% 
+mutate(`Cumulative P Load 66% Day`=cumsum(`Outflow 66% Day Load`)) %>%
 #mutate(`Cumulative P Load 50% Day`=cumsum(`Outflow 50% Day Load`)) %>%
-#mutate(`Cumulative P Load 66% Day`=cumsum(`Outflow 66% Day Load`)) %>%
 #mutate(`Cumulative P Load 100% Night`=cumsum(`Outflow 100% Night Load`)) %>%  
 #mutate(`Cumulative P 50% between 12-4AM`=cumsum(`Outflow 50% between 12-4AM Load`)) %>%  
 #mutate(`Cumulative P 100% between 12-4AM`=cumsum(`Outflow 100% between 12-4AM Load`)) %>%  
 #mutate(`Inverse Diel P Pattern Flow`=cumsum(`Outflow Opposite Diel P Pattern Load`))  %>% 
 select(-`Outflow HLR`, -Inflow,-`Inflow HLR`,-TRP,-Month,-Day,-Time,-Year,-Minute,-date) 
 
+#Make sure cumulative flow is the same for each scenario
+Cumulative_flow_check <- Outflow_TP_Load_Scenarios_wide %>%
+group_by(Flowway) %>%
+summarise(n=n(),`baseline flow`=sum(Outflow),`Outflow 100% between 8am-8pm`=sum(`Outflow 100% between 8am-8pm`),`Outflow 66% between 8pm-8am`=sum(`Outflow 66% between 8pm-8am`),`Outflow 75% between 12-4AM`=sum(`Outflow 75% between 12-4AM`),`Outflow 66% Day`=sum(`Outflow 66% Day`)) 
 
-# Estimated FWM TP using cumulative TP load and cumaltive flow ------------
+
+# Estimated FWM TP using cumulative TP load and cumulative flow ------------
 
 #Calculate FWM using the cumulative sum of rowwise calculations
 Calculated_FWM <-Outflow_TP_Load_Scenarios_wide %>%
@@ -121,26 +139,25 @@ write.csv(flow_weighted_mean,"./Data/FWM_Rowwise_Estimates.csv")
 
 # bootstrap CI and SE of Flow Weighted Mean -------------------------------
 
-#Function to calculate FWM
+#Function to calculate FWM using base weighted mean function
 samplewmean <- function(data, d) {
   return(weighted.mean(x=data[d,2], w=data[d,1],normwt = TRUE)) 
 }
 
-
+#Function to calculate FWM using my own calculations of weighted mean
 Flow_Weighted_Mean <- function(data, d) {
 n <-nrow(data)
 Flow <- data[d,1]
 TP_interpolated <- data[d,2]
-TP_Load <- sum(Flow*TP_interpolated*3600*28.3168)
-Flow_total <- sum(Flow*3600*28.3168)
+TP_Load <- sum(Flow*TP_interpolated)
+Flow_total <- sum(Flow)
 FWM<- TP_Load/Flow_total
-output <- list("FWM"=FWM)
-return(output)
+return(FWM)
 }
 
 #set seed for reproducibility 
-
 set.seed(1000)
+
 #STA2 
 STA2_DF <- Outflow_TP_Load_Scenarios_wide %>% filter(Flowway=="STA-2 Central")  #create DF for STA2 FW3
   
@@ -149,9 +166,10 @@ STA2_Baseline <- mutate(tidy(boot(data=STA2_DF[,c(4,9)], statistic = samplewmean
 STA2_66_night  <-mutate(tidy(boot(data=STA2_DF[,c(10,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8pm-8am ")
 STA2_100_day  <-mutate(tidy(boot(data=STA2_DF[,c(11,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="100% Flow between 8am-8pm")
 STA2_75_12am_4am <-mutate(tidy(boot(data=STA2_DF[,c(12,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="75% Flow between 12am-4am")
+STA2_66_day <-mutate(tidy(boot(data=STA2_DF[,c(13,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8am-8pm")
 
 #combine parameter estimates in DF
-STA2_Stats <-mutate(rbind(STA2_Baseline,STA2_66_night,STA2_100_day,STA2_75_12am_4am),Flowway="STA-2 Central")
+STA2_Stats <-mutate(rbind(STA2_Baseline,STA2_66_night,STA2_100_day,STA2_75_12am_4am,STA2_66_day),Flowway="STA-2 Central")
 
 #STA34 Central
 STA34C_DF <- Outflow_TP_Load_Scenarios_wide %>%  #create DF for STA34 FW central
@@ -162,9 +180,10 @@ STA34C_Baseline <- mutate(tidy(boot(data=STA34C_DF[,c(4,9)], statistic = samplew
 STA34C_66_night  <-mutate(tidy(boot(data=STA34C_DF[,c(10,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8pm-8am ")
 STA34C_100_day  <-mutate(tidy(boot(data=STA34C_DF[,c(11,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="100% Flow between 8am-8pm")
 STA34C_75_12am_4am <-mutate(tidy(boot(data=STA34C_DF[,c(12,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="75% Flow between 12am-4am")
+STA34C_66_day <-mutate(tidy(boot(data=STA34C_DF[,c(13,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8am-8pm")
 
 #combine parameter estimates in DF
-STA34C_Stats <-mutate(rbind(STA34C_Baseline,STA34C_66_night,STA34C_100_day,STA34C_75_12am_4am),Flowway="STA-34 Central")
+STA34C_Stats <-mutate(rbind(STA34C_Baseline,STA34C_66_night,STA34C_100_day,STA34C_75_12am_4am,STA34C_66_day),Flowway="STA-34 Central")
 
 #STA34 Western
 STA34W_DF <- Outflow_TP_Load_Scenarios_wide %>%  #create DF for STA34 FW Western
@@ -175,9 +194,10 @@ STA34W_Baseline <- mutate(tidy(boot(data=STA34W_DF[,c(4,9)], statistic = samplew
 STA34W_66_night  <-mutate(tidy(boot(data=STA34W_DF[,c(10,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8pm-8am ")
 STA34W_100_day  <-mutate(tidy(boot(data=STA34W_DF[,c(11,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="100% Flow between 8am-8pm")
 STA34W_75_12am_4am <-mutate(tidy(boot(data=STA34W_DF[,c(12,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="75% Flow between 12am-4am")
+STA34W_66_day <-mutate(tidy(boot(data=STA34W_DF[,c(13,9)], statistic = samplewmean, R=1000),conf.int = TRUE,digits = 6),Scenario="66% Flow between 8am-8pm")
 
 #combine parameter estimates in DF
-STA34W_Stats <-mutate(rbind(STA34W_Baseline,STA34W_66_night,STA34W_100_day,STA34W_75_12am_4am),Flowway="STA-34 Western")
+STA34W_Stats <-mutate(rbind(STA34W_Baseline,STA34W_66_night,STA34W_100_day,STA34W_75_12am_4am,STA34W_66_day),Flowway="STA-34 Western")
 
 #Combine bootstrap estimates from all flowways
 All_FWs_Stats <- rbind(STA34W_Stats,STA2_Stats,STA34C_Stats)
@@ -220,6 +240,59 @@ write.csv(`Transposed Weighted Mean Table`,"./Data/FWM estimates using HMISC.csv
 
 
   
+
+
+# Hypothesis tests of FWM  --------------------------------------------
+#Bootstrap method used for hypothesis test because daily or instant FWM values do not equal the FWM when calculated using cumulative values
+
+#Table showing average of daily FWM does not equal cumulative flow weighted mean
+Instantaneous_FWM <- Outflow_TP_Load_Scenarios_wide %>%
+group_by(Flowway,Date) %>%
+summarise(`Instant FWM Baseline`=sum(`TP interpolated`*Outflow)/sum(`Outflow`),`Instant FWM 100% 8am to 8pm`=sum(`TP interpolated`*`Outflow 100% between 8am-8pm`)/sum(`Outflow 100% between 8am-8pm`)) %>%
+pivot_longer(`Instant FWM Baseline`:`Instant FWM 100% 8am to 8pm`,names_to = "Scenario", values_to = "Value") %>%
+group_by(Flowway,Scenario) %>%
+summarise(n=n(),`is finite`=sum(is.finite(Value)),`FWM mean of Instant`=mean(Value,na.rm=TRUE),`FWM median of Instant`=median(Value,na.rm=TRUE))  
+  
+#Create STA2 Bootstrap objects
+STA2_boot_Baseline <-boot(data=STA2_DF[,c(4,9)], statistic = samplewmean, R=1000)
+STA2_boot_66_night <-boot(data=STA2_DF[,c(10,9)], statistic = samplewmean, R=1000)
+STA2_boot_100_day  <-boot(data=STA2_DF[,c(11,9)], statistic = samplewmean, R=1000)
+STA2_boot_75_12am_4am <- boot(data=STA2_DF[,c(12,9)], statistic = samplewmean, R=1000)
+STA2_boot_66_day <- boot(data=STA2_DF[,c(13,9)], statistic = samplewmean, R=1000)
+
+#Use confidence inversion to test for statistical difference vs baseline using method  https://modernstatisticswithr.com/modchapter.html#intervalinversion
+boot.pval(STA2_boot_66_night, type = "perc", theta_null = STA2_boot_Baseline$t0)   #test baseline vs 66% night
+boot.pval(STA2_boot_100_day, type = "perc", theta_null = STA2_boot_Baseline$t0)   #test baseline vs 100% day
+boot.pval(STA2_boot_75_12am_4am , type = "perc", theta_null = STA2_boot_Baseline$t0)   #test baseline vs 75% 12-4am
+boot.pval(STA2_boot_66_day , type = "perc", theta_null = STA2_boot_Baseline$t0)   #test baseline vs 66% day
+
+
+#Create STA34C Bootstrap objects
+STA34C_boot_Baseline <-boot(data=STA34C_DF[,c(4,9)], statistic = samplewmean, R=1000)
+STA34C_boot_66_night <-boot(data=STA34C_DF[,c(10,9)], statistic = samplewmean, R=1000)
+STA34C_boot_100_day  <-boot(data=STA34C_DF[,c(11,9)], statistic = samplewmean, R=1000)
+STA34C_boot_75_12am_4am <- boot(data=STA34C_DF[,c(12,9)], statistic = samplewmean, R=1000)
+STA34C_boot_66_day <- boot(data=STA34C_DF[,c(13,9)], statistic = samplewmean, R=1000)
+
+#CI inversion for statistical difference
+boot.pval(STA34C_boot_66_night, type = "perc", theta_null = STA34C_boot_Baseline$t0)   #test baseline vs 66% night
+boot.pval(STA34C_boot_100_day, type = "perc", theta_null = STA34C_boot_Baseline$t0)   #test baseline vs 100% day
+boot.pval(STA34C_boot_75_12am_4am  , type = "perc", theta_null = STA34C_boot_Baseline$t0)   #test baseline vs 75% 12-4am
+boot.pval(STA34C_boot_66_day  , type = "perc", theta_null = STA34C_boot_Baseline$t0)   #test baseline vs 66% day
+
+#Create STA34W Bootstrap objects
+STA34W_boot_Baseline <-boot(data=STA34W_DF[,c(4,9)], statistic = samplewmean, R=1000)
+STA34W_boot_66_night <-boot(data=STA34W_DF[,c(10,9)], statistic = samplewmean, R=1000)
+STA34W_boot_100_day  <-boot(data=STA34W_DF[,c(11,9)], statistic = samplewmean, R=1000)
+STA34W_boot_75_12am_4am <- boot(data=STA34W_DF[,c(12,9)], statistic = samplewmean, R=1000)
+STA34W_boot_66_day <- boot(data=STA34W_DF[,c(13,9)], statistic = samplewmean, R=1000)
+
+#CI inversion for statistical difference
+boot.pval(STA34W_boot_66_night, type = "perc", theta_null = STA34W_boot_Baseline$t0)   #test baseline vs 66% night
+boot.pval(STA34W_boot_100_day, type = "perc", theta_null = STA34W_boot_Baseline$t0)   #test baseline vs 100% day
+boot.pval(STA34W_boot_75_12am_4am  , type = "perc", theta_null = STA34W_boot_Baseline$t0)   #test baseline vs 75% 12-4am
+boot.pval(STA34W_boot_66_day  , type = "perc", theta_null = STA34W_boot_Baseline$t0)   #test baseline vs 75% 12-4am
+
 
 # Figures -----------------------------------------------------------------
 ggplot(Outflow_TP_Load_Scenarios,aes(Date_Time,`Value`,color=Scenario,label=Scenario))+geom_text(label="-")+theme_bw()+facet_wrap(vars(Flowway),nrow=1,scales = "free")+
