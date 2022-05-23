@@ -274,16 +274,16 @@ Outflow_HLR_All <- rbind(Outflow_HLR_1,Outflow_HLR_2)  %>% rbind(Outflow_HLR_3)
 
 #ggplot(Outflow_HLR_All,aes(`Outflow HLR Category`,Amplitude,fill=Model))+geom_point(shape=21,size=2)+facet_grid(`Flowpath Region`~Flowway)+theme_bw()+ theme(axis.text.x=element_text(angle=90,hjust=1))
 
-#Days of continious flow
+#Days of continuous flow
 Complete_inflow_days <-Complete_Days_extra_time %>% filter(`Continuous InFlow`=="TRUE")%>% filter (between(Time,0,24))
 Complete_outflow_days <-Complete_Days_extra_time %>% filter(`Continuous OutFlow`=="TRUE")%>% filter (between(Time,0,24))
 Complete_flow_days <-Complete_Days_extra_time %>% filter(`Continuous OutFlow`=="TRUE") %>% filter(`Continuous InFlow`=="TRUE") %>% filter (between(Time,0,24))
 
-#Continous inflow
+#Continuous inflow
 Cont_inflow_days <- rbind(Complete_inflow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_inflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Inflow")
-#continous outflow
+#continuous outflow
 Cont_outflow_days <- rbind(Complete_outflow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_outflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Outflow")
-#continous inflow and outflow
+#continuous inflow and outflow
 Cont_flow_days <- rbind(Complete_flow_days %>% GAM_MODEL(.,Min_Obs ) %>% GAM_Extract_Parameters(),Complete_flow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% LOESS_Extract_Parameters()) %>% mutate(`Condition`="Continuous Inflow and Outflow")
 
 # Filter Data Set by Environmental Conditions -----Step 3-------LOESS only------------
@@ -404,7 +404,7 @@ geom_ribbon(data =fig_2_fit,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`LOESS Pred
 geom_line(data =fig_2_fit,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub Fig 2- Hourly TP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 8, height = 4, units = "in", dpi = 300, limitsize = TRUE)
 
@@ -422,7 +422,7 @@ geom_ribbon(data =Inflow_Stage_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=
 geom_line(data =Inflow_Stage_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+  
 facet_grid(`Max Daily Inflow Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub SI 1- Hourly TP Variation from the Daily Mean by Station and Inflow Stage Condition.jpeg", plot = last_plot(), width = 8, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
@@ -441,7 +441,7 @@ geom_ribbon(data =Outflow_Stage_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin
 geom_line(data =Outflow_Stage_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Max Daily Outflow Stage`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub SI 2- Hourly TP Variation from the Daily Mean by Station and Outflow Stage Condition.jpeg", plot = last_plot(), width = 8, height = 9, units = "in", dpi = 300, limitsize = TRUE)
 
@@ -459,7 +459,7 @@ geom_ribbon(data =Inflow_HLR_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`L
 geom_line(data =Inflow_HLR_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Inflow HLR Category`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub SI 3- Hourly TP Variation from the Daily Mean by Station and Inflow HLR Condition.jpeg", plot = last_plot(), width = 8, height = 6, units = "in", dpi = 300, limitsize = TRUE)
 
@@ -476,15 +476,15 @@ geom_ribbon(data =Outflow_HLR_All_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymin=`
 geom_line(data =Outflow_HLR_All_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Outflow HLR Category`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub SI 4- Hourly TP Variation from the Daily Mean by Station and Outflow HLR Condition.jpeg", plot = last_plot(), width = 8, height = 6, units = "in", dpi = 300, limitsize = TRUE)
 
-#Continous inflow
+#Continuous inflow
 Cont_inflow_days_fig <- Complete_inflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% mutate(`Condition`="Continuous Inflow")
-#continous outflow
+#continuous outflow
 Cont_outflow_days_fig <- Complete_outflow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>%  mutate(`Condition`="Continuous Outflow")
-#continous inflow and outflow
+#continuous inflow and outflow
 Cont_flow_days_fig <- Complete_flow_days %>% LOESS_MODEL(.,Span_width ,Min_Obs) %>% mutate(`Condition`="Continuous Inflow and Outflow")
 
 Cont_flow_days_all_fig <- rbind(Cont_inflow_days_fig,Cont_outflow_days_fig)  %>% rbind(Cont_flow_days_fig) %>% mutate(Condition=factor(Condition,levels = c("Continuous Inflow","Continuous Outflow","Continuous Inflow and Outflow")))
@@ -495,7 +495,7 @@ geom_ribbon(data =Cont_flow_days_all_fig,aes(Time,ymax=`LOESS Prediction`+SE,ymi
 geom_line(data =Cont_flow_days_all_fig,aes(Time,`LOESS Prediction`),color="black",size=1)+
 facet_grid(`Condition`~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub SI 5- Hourly TP Variation from the Daily Mean by Station and continuous flow Condition.jpeg", plot = last_plot(), width = 8, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
@@ -504,7 +504,7 @@ ggplot(RPAS_extra_time ,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(sh
 geom_smooth(color="black",method = "loess",span=0.5,method.args = list(family = "symmetric",degree=2,iterations=4))+  
 facet_grid(Station~Month)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,2))+scale_x_continuous(breaks = seq(0,24,4))+
 coord_cartesian(ylim = c(-10,10),xlim = c(1,23))+theme_bw()+ guides(colour=FALSE)+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.1),panel.spacing.x = unit(.5, "lines"))+ #geom_vline(xintercept = c(0,24),color="blue")+
-labs(y="Deviation from daily mean (P ug/L)",x="Hour")
+labs(y=expression("Deviation from daily mean TP"~(mu~g~L^-1)),x="Hour")
 
 ggsave("Figures/Pub SI 6- Hourly TP Variation from the Daily Mean by Station and Month.jpeg", plot = last_plot(), width = 8, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
