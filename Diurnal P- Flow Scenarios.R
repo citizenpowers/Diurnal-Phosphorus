@@ -16,7 +16,7 @@ library(boot)
 library(broom)
 library(boot.pval)
 
-citation("zoo")
+citation("boot")
 
 # Import data for RPA analysis -------------------------------------------------------------
 #RPA tidy data
@@ -237,12 +237,6 @@ summarise(`Baseline WM`=weighted.mean(`TP interpolated`,`Outflow`,na.rm=TRUE),`B
 
 #Save data from HMISC estimates
 write.csv(`Transposed Weighted Mean Table`,"./Data/FWM estimates using HMISC.csv")
-
-
-
-
-
-  
 
 
 # Hypothesis tests of FWM  --------------------------------------------

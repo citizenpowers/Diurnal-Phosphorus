@@ -74,14 +74,18 @@ date_range_summary <- RPAs_Sorted %>%
 group_by(Station,Date) %>%
 summarise(n=n(),min=min(Date),max=max(Date),`Number of samples`=sum(!is.na(TPO4))) 
   
-  
 days_of_samples <- RPAs_Sorted %>%
 group_by(Station,Date) %>%
 summarise(`Number of samples`=sum(!is.na(TPO4))) %>%  
 filter(`Number of samples`>0)  %>%
 summarise(n=n())
 
-
+#Number of RPAs deployed by date
+Number_of_RPA <- RPAs_Sorted %>%
+group_by(Date) %>%
+distinct(Station_ID) %>%
+summarise(n=n()) 
+  
 #histogram of median TP concentrations 
 ggplot(RPAs_Sorted,aes(`24_hour_median`))+geom_histogram()+facet_wrap(~Station,scales="free")+theme_bw()
 
@@ -885,7 +889,7 @@ ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,Flowway=="STA-3/4C2")
 facet_wrap(~Flowway,ncol=1)+scale_colour_brewer( type = "qual", palette = "Set2")+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 (ug/L)",x="Date")
 
-#Strong linear realtionships fror the flowways in STA-3/4
+#Strong linear realtionships for the flowways in STA-3/4
 ggplot(filter(RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP,!is.na(`Inflow TP`)),aes(`Inflow TP`,TPO4,color=Flowway))+geom_point(shape=1)+geom_smooth(method="lm")+
 stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), label.x.npc = "right",formula =y~x, parse = TRUE, size = 3)+theme_bw()+labs(y="Outflow TP (ug/L)",x="Inflow TP (ug/L)")
 
