@@ -11,7 +11,6 @@ library(tidyr)
 library(maptools)
 library(ggpmisc)
 library(e1071)
-library(cowplot)
 
 
 # Import data for RPA analysis -------------------------------------------------------------
@@ -205,7 +204,15 @@ ggplot(RPAs_Sorted,aes(as.factor(Hour),Diff_24_hour_median,fill=Station))+geom_b
 scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 #scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 facet_wrap(~Station)+theme_bw()+
+labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily median (ug/L)",x="Hour")
+
+#boxplots medians
+ggplot(RPAs_Sorted,aes(as.factor(Hour),Diff_24_hour_mean,fill=Station))+geom_boxplot()+
+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+#scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+facet_wrap(~Station)+theme_bw()+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
+
 
 #Hourly % TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
@@ -494,11 +501,11 @@ ggsave("Figures/Hourly Deviation from Daily Median by Outflow Stage.jpeg", plot 
 # Flow vs TP  -------------------------------------------------------------
 # TP vs inflow CFS
 ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway,scales="free")+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway,scales="free_x")+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,200))+
 labs(title="TPO4 vs Inflow  ",y="TPO4 (ug/L)",x="Inflow (CFS)",color=NULL)
 
-ggsave("Figures/TPO4 vs Inflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 # TP vs Outflow CFS
 ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(Inflow,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
@@ -514,62 +521,12 @@ theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qu
 geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,100))+
 labs(title="TPO4 vs Inflow  ",y="TPO4 (ug/L)",x="Inflow HLR",color=NULL)
 
-ggsave("Figures/TPO4 vs Inflow HLR.jpeg.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
-
-
-#create better TP vs HLR using cowplot so custom scales for each flowpath region can be set 
-plot_1_HLR_vs_TP <- ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow",`Flowpath Region`=="Inflow") ,aes(`Inflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station",guide = 'none')+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,200))+
-labs(title="",y="",x="",color=NULL,fill=NULL)
-
-midflow_data <- filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow",`Flowpath Region`=="Midflow") %>% add_row(`Flowpath Region`="Midflow",Flowway="STA-2 Central")  #add blank data so for sta2 midlflow
-plot_2_HLR_vs_TP <- ggplot(midflow_data,aes(`Inflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+
-scale_fill_manual( values=c("#fc8d62","#8da0cb","#7fc97f"),name="Station",guide = 'none')+scale_color_manual(values=c("#fc8d62","#8da0cb","#7fc97f"),guide = 'none')+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,150))+
-labs(title="",y="",x="",color=NULL,fill=NULL)
-
-plot_3_HLR_vs_TP <- ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow",`Flowpath Region`=="Outflow") ,aes(`Inflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,50))+
-labs(title="",y="",x=expression(Inflow~HLR~(cm~day^-1)),color=NULL)
-
-#create cowplot for inflow HLR vs TP
-plot_grid(plot_1_HLR_vs_TP,plot_2_HLR_vs_TP,plot_3_HLR_vs_TP,ncol = 1,nrow=3,align="h")+
-draw_label(expression(TP~(mu~g~L^-1)),angle=90,x=0.015,size=10)
-
-ggsave("Figures/Inflow HLR vs TP.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
-
-#create better TP vs Outflow HLR using cowplot so custom scales for each flowpath region can be set 
-plot_1_HLR_outflow_vs_TP <- ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow",`Flowpath Region`=="Inflow") ,aes(`Outflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station",guide = 'none')+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,200))+
-labs(title="",y="",x="",color=NULL,fill=NULL)
-
-midflow_data <- filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow",`Flowpath Region`=="Midflow") %>% add_row(`Flowpath Region`="Midflow",Flowway="STA-2 Central")  #add blank data so for sta2 midlflow
-plot_2_HLR_outflow_vs_TP <- ggplot(midflow_data,aes(`Outflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+
-scale_fill_manual( values=c("#fc8d62","#8da0cb","#7fc97f"),name="Station",guide = 'none')+scale_color_manual(values=c("#fc8d62","#8da0cb","#7fc97f"),guide = 'none')+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,150))+
-labs(title="",y="",x="",color=NULL,fill=NULL)
-
-plot_3_HLR_outflow_vs_TP <- ggplot(filter(RPAs_with_Flow,`Inflow Category`!="Reverse Flow",`Flowpath Region`=="Outflow") ,aes(`Outflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,50))+
-labs(title="",y="",x=expression(Outflow~HLR~(cm~day^-1)),color=NULL)
-
-#create cowplot for inflow HLR vs TP
-plot_grid(plot_1_HLR_outflow_vs_TP,plot_2_HLR_outflow_vs_TP,plot_3_HLR_outflow_vs_TP ,ncol = 1,nrow=3,align="h")+
-draw_label(expression(TP~(mu~g~L^-1)),angle=90,x=0.015,size=10)
-
-ggsave("Figures/Outflow HLR vs TP.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
-
+ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 # TP vs Outflow HLR
 ggplot(filter(RPAs_with_Flow,`Outflow Category`!="Reverse Flow") ,aes(`Outflow HLR`,TPO4,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+geom_smooth(method="loess",color="black",fill="grey",method.args = list(family = "symmetric",degree=2))+
-theme_bw()+facet_grid(`Flowpath Region`~Flowway,scales="free_y")+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
-geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(xlim = c(0,30),ylim = c(0,100))+
+theme_bw()+facet_grid(`Flowpath Region`~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2",guide = 'none')+scale_fill_brewer( type = "qual", palette = "Set2",name="Station")+
+geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = c(0,100))+
 labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Outflow HLR",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)

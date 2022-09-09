@@ -12,6 +12,8 @@ library(maptools)
 library(ggpmisc)
 library(e1071)
 library(cowplot)
+library(devtools) 
+library(nlcor)
 
 # Import Data -------------------------------------------------------------
 
@@ -40,5 +42,20 @@ group_by(Flowway, `Flowpath Region`,`Outflow HLR Category`)  %>%
 summarise(n=sum(!is.na(TPO4)),
 `Inflow Spearmans Correlation`=cor(`Inflow HLR`,TPO4,use="pairwise.complete.obs", method = "spearman"))
 
+
+# Nonlinear correlation with "nlcor" package ------------------------------
+G380 <- filter(drop_na(RPAs_with_Flow,TPO4,`Outflow HLR`),Station=="G380",TPO4<200)
+NLC_G380 <- nlcor(G380$`Outflow HLR`, G380$TPO4, plt = T,refine=.8)
+NLC_G380$cor.estimate
+
+NLC_all_data$adjusted.p.value
+
+G334 <- filter(drop_na(RPAs_with_Flow,TPO4,`Outflow HLR`),Station=="G334",TPO4<200)
+NLC_G334 <- nlcor(G334$`Outflow HLR`, G334$TPO4, plt = T,refine=.75)
+NLC_G334$cor.estimate
+
+G379 <- filter(drop_na(RPAs_with_Flow,TPO4,`Outflow HLR`),Station=="G379",TPO4<200)
+NLC_G379 <- nlcor(G379$`Outflow HLR`, G379$TPO4, plt = T,refine=.8)
+NLC_G379$cor.estimate
 
 
