@@ -111,9 +111,6 @@ write.csv(Combined_BK_Flow, "Data/Combined_BK_Flow.csv",row.names=FALSE)
 
 # Step 2: Import and Tidy RPA data  --------------------------------------
 
-#Import flow data from csv
-Combined_BK_Flow <-  read_csv("Data/Combined_BK_Flow.csv") 
-
 #RPA data from outflows 
 RPAs_outflows <-  read_excel("Data/Outflows.xlsx", col_types = c("text", "date", "numeric",  "numeric")) 
 
@@ -153,7 +150,6 @@ mutate(`Percent difference from daily mean`=(Diff_24_hour_mean/`24_hour_mean`)*1
 mutate(`Station` = factor(`Station`, levels = c("G333", "G334","G377","G378","G379","G380","G384","G381")))  
 
 write.csv(RPAs_Sorted, "Data/RPAs Sorted.csv",row.names=FALSE)
-
 
 # Outlier analysis- Create dataset with ouliers removed --------------------------------------------------------
 
@@ -316,6 +312,8 @@ mutate(Temp_Diff_24_hour_median=`Avg Hourly Temp`-median(`Avg Hourly Temp`),SpCo
         `DO Percent Diff from 24 median`=DO_Diff_24_hour_median/median(`Avg Hourly DO`)*100,`pH Percent Diff from 24 median`=pH_Diff_24_hour_median/median(`Avg Hourly pH`)*100,
         `SpCond Percent Diff from 24 median`=SpCond_Diff_24_hour_median/median(`Avg Hourly SpCond`)*100,`Temp Percent Diff from 24 median`=Temp_Diff_24_hour_median/median(`Avg Hourly Temp`)*100)
 
+write.csv(Sonde_Tidy, "Data/Sonde Tidy.csv",row.names=FALSE)
+
 # Step 6: Import and Tidy Weather Data ------------------------------------
 
 S7_R_BK <- mutate(select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1,"Rain S7"=4),1,4),date=dmy_hms(date))  #Rain data at S7
@@ -323,6 +321,8 @@ S7_R_BK <- mutate(select(rename(read_csv("Data/S7_R_BK.csv",  skip = 2),date = 1
 S7_R_DA <- mutate(select(rename(read_csv("Data/S7_R_DA.csv",  skip = 3),Date = 3,"Rain S7 DA"=4),3,4),Date=dmy(Date))  #Rain data at S7
 
 S7_E_BK <- mutate(select(rename(read_csv("Data/S7_E_BK.csv",  skip = 2),date = 1,"EVAP S7"=4),1,4),date=dmy_hms(date))  #Evaporation data at S7
+
+S7_T_DA <- mutate(select(rename(read_csv("Data/S7_T_DA.csv",  skip = 3),date = 3,"Temp S7"=4),1,3,4),Date=dmy(date))  #Daily Temp data at S7
 
 BELLW_WNVS_BK <- mutate(select(rename(read_csv("Data/BELLW_WNVS_BK.csv",  skip = 2),date = 1,"WIND BELLEGLADE"=4),1,4),date=mdy_hm(date)) #max daily windspeed in at belleglade weather station
 
@@ -345,7 +345,8 @@ select(-date) %>%
 left_join(S7_R_DA,by="Date")%>%  
 full_join(S7_R_BK_tidy,by=c("Date","Hour","Minute")) %>%  
 full_join(S7_E_BK_tidy,by=c("Date","Hour","Minute")) %>%    
-full_join(BELLW_WNVS_BK_tidy,by=c("Date","Hour","Minute")) %>%   
+full_join(BELLW_WNVS_BK_tidy,by=c("Date","Hour","Minute")) %>%  
+left_join(S7_T_DA,by="Date")%>%  
 arrange(Date) %>%
 fill(`Rain S7`,`WIND BELLEGLADE`) %>%       #This fills in chronologically with last known value for RAIN and WIND. Not sure that fill down is good idea for EVAP data
 group_by(Date) %>%
@@ -376,6 +377,10 @@ mutate(`Max Daily Wind` = case_when(between(max(`WIND BELLEGLADE`,na.rm=TRUE),0,
                                     max(`WIND BELLEGLADE`,na.rm=TRUE)>20~ "20+ Max Daily Wind (mph)")) %>%
 mutate(`Max Daily Wind` = factor(`Max Daily Wind`, levels = c("0-10 Max Daily Wind (mph)", "10-15 Max Daily Wind (mph)","15-20 Max Daily Wind (mph)","20+ Max Daily Wind (mph)")))  
 
+
+write.csv(Combined_Weather, "Data/Combined_Weather.csv",row.names=FALSE)
+
+
 # Step 7: Import and Tidy Inflow P Data from compliance sites ------------------------------------
 
 G378B_Midflow_TP <- read_csv("Data/G378B_Midflow_TP.csv")
@@ -405,6 +410,9 @@ Inflow_TP_Data <-G378B_tidy %>%
 
 # Step 8: Join Flow and RPA data and save DF --------------------------------------
 
+Combined_BK_Flow <-  read_csv("Data/Combined_BK_Flow.csv") #Import combined flow data
+RPAs_Sorted <-  read_csv("Data/RPAs Sorted.csv") #Import combined flow data
+
 RPAs_with_Flow <-  RPAs_Sorted %>%
 left_join(Combined_BK_Flow ,by=c("Date","Hour","Flowway")) %>%
 filter(is.finite(Outflow) || is.finite(Inflow)) %>%     #need inflow data
@@ -417,7 +425,6 @@ mutate(`Outflow HLR Category` = as.factor(case_when( between(`Outflow HLR`,0,.1)
 mutate(`Outflow HLR Category`=factor(`Outflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10+ (cm/day)"))) %>%
 mutate(`Inflow HLR Category` = as.factor(case_when( between(`Inflow HLR`,0,.1) ~ "0-.1 (cm/day)",between(`Inflow HLR`,.1,10) ~ "0.1-10 (cm/day)",`Inflow HLR`>10 ~ "10+ (cm/day)" ,`Inflow HLR`>20 ~ "20+ (cm/day)", `Inflow HLR`<0 ~ "Reverse Flow"))) %>%
 mutate(`Inflow HLR Category`=factor(`Inflow HLR Category`,levels = c("Reverse Flow","0-.1 (cm/day)","0.1-10 (cm/day)","10+ (cm/day)"))) 
-
 
 write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
@@ -432,19 +439,21 @@ group_by(Flowway,Date) %>%
 mutate(`Outflow_Stage_24_hour_mean`=mean(`Outflow Stage`),`Inflow_Stage_24_hour_mean`=mean(`Inflow Stage`)) %>%       #calculate daily mean stage for inflow and outflow
 mutate(`Outflow Stage Diff 24 hour mean`=`Outflow Stage`-`Outflow_Stage_24_hour_mean`,`Inflow Stage Diff 24 hour mean`=`Inflow Stage`-`Inflow_Stage_24_hour_mean`)  #calculate hourly deviation from daily mean for inflow and outflow
 
-
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv",row.names=FALSE)
 
 
 # Step 10: Join with Weather data ------------------------------------------
 
+Combined_Weather <-  read_csv("Data/Combined_Weather.csv") #Import combined weather data
+
 RPAs_with_Flow_Stage_Weather <- RPAs_with_Flow_Stage %>%
-left_join(Combined_Weather ,by=c("Date","Hour","Minute"))
+left_join(select(Combined_Weather,-Station,-date),by=c("Date","Hour","Minute"))
 
 write.csv(RPAs_with_Flow_Stage_Weather, "Data/RPA and Flow Stage Weather.csv",row.names=FALSE)
 
-
 # Step 11: Join with Sonde Data --------------------------------------------
+
+Sonde_Tidy <-  read_csv("Data/Sonde Tidy.csv") #Import combined weather data
 
 RPAs_with_Flow_Stage_Weather_Sonde <- RPAs_with_Flow_Stage_Weather %>%
 left_join(Sonde_Tidy ,by=c("Date","Hour","Station"))
