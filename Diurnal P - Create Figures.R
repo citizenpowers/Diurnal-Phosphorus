@@ -843,20 +843,20 @@ ggsave("Figures/Diel Patterns in Dissolved Oxygen and Phosphorus.jpeg", plot = l
 #percentage of flow by hour
 Total_Flow_Hour<- Combined_BK_Flow %>%
 mutate(Year=year(Date)) %>%
-group_by(Station,Hour,Year) %>%
-summarise(n=n(),`Total Cubic ft`=sum(Flow*60,na.rm=TRUE),`Average cfs`=mean(Flow,na.rm=TRUE),`Total Acre ft`=sum(`Flow`*60*2.2957e-5,na.rm=TRUE),`Average Acre ft`=mean(`Flow`*60*2.2957e-5,na.rm=TRUE))
+group_by(Flowway,Hour,Year) %>%
+summarise(n=n(),`Total Cubic ft`=sum(Outflow*60,na.rm=TRUE),`Average cfs`=mean(Outflow,na.rm=TRUE),`Total Acre ft`=sum(`Outflow`*60*2.2957e-5,na.rm=TRUE),`Average Acre ft`=mean(`Outflow`*60*2.2957e-5,na.rm=TRUE))
 
 #percentage of flow by hour
 Percent_flow  <- Combined_BK_Flow %>%
 mutate(Year=year(Date)) %>%
-group_by(Station,Year) %>%
-summarise(n=n(),`Cumulative Cubic ft`=sum(Flow*60,na.rm=TRUE)) %>%
-right_join(Total_Flow_Hour,by =c("Station","Year")) %>%
+group_by(Flowway,Year) %>%
+summarise(n=n(),`Cumulative Cubic ft`=sum(Outflow*60,na.rm=TRUE)) %>%
+right_join(Total_Flow_Hour,by =c("Flowway","Year")) %>%
 mutate(`Day or Night`=if_else(between(as.numeric(Hour),9,21),"Day","Night")) %>%
 mutate(`Percent Flow by Hour`=`Total Cubic ft`/`Cumulative Cubic ft`)
 
 #percentage of flow by hour
-ggplot(Percent_flow,aes(as.factor(Hour),`Percent Flow by Hour`,fill=Station,color=Station))+geom_point()+theme_bw()+facet_wrap(~Year,nrow = 1)+
+ggplot(Percent_flow,aes(as.factor(Hour),`Percent Flow by Hour`,fill=Flowway,color=Flowway))+geom_point()+theme_bw()+facet_wrap(~Year,nrow = 1)+
 scale_color_brewer( type = "qual", palette = "Set2")+scale_x_discrete(limits=paste("",seq(0,24,1),sep=""),breaks =seq(0,24,4))+
 theme(axis.text.x=element_text(angle=90,hjust=1,vjust = .5))+scale_y_continuous(labels = percent,limits = c(0,.1))+
 labs(title="Percent Flow by Hour",y="Percent %",x="Hour")
