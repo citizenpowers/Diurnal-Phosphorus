@@ -83,7 +83,7 @@ fill(`G377A-C-Q`,`G377B-C-Q`,`G377C-C-Q`,`G377D-C-Q`,`G377E-C-Q`) %>%
 mutate(G377=rowSums(.[2:6],na.rm=TRUE))          
 
 #Combined Outflow over entire flowway
-Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "US/Eastern"), to=ISOdate(2017,10,01,0,0,0,tz = "US/Eastern"),by = "min")),"date") %>%
+Combined_BK_Flow_step1 <-  setNames(as.data.frame(seq(from=ISOdate(2012,7,01,0,0,0,tz = "UTC"), to=ISOdate(2017,10,01,0,0,0,tz = "UTC"),by = "min")),"date") %>%
 left_join(G381_C_BK,by="date") %>%  #combine data from G381, G334, G379D
 left_join(G379_C_BK,by="date") %>%
 left_join(G334_S_BK,by="date")  %>%

@@ -11,7 +11,7 @@ library(tidyr)
 library(maptools)
 library(ggpmisc)
 library(e1071)
-
+library(EnvStats)
 
 # Import data for RPA analysis -------------------------------------------------------------
 #RPA raw data
@@ -103,11 +103,11 @@ theme_bw()
 
 #missing data. Ist there a pattern in the missing data by time of day? 
 RPA_summary <-RPAs_Sorted %>%
+filter(`Flowpath Region`=="Outflow") %>%
 mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
-group_by(Hour,Station) %>%
+group_by(Station) %>%
 summarise(`Number of Observations`=sum(!is.na(TPO4)),`Total missing data`=sum(is.na(TPO4)),n=n()) %>% 
-mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) %>%
-gather("Data Type","Value",3:4)
+mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) 
 
 ggplot(RPA_summary,aes(Hour,Value,fill=`Data Type`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
 
@@ -121,11 +121,22 @@ ggplot(RPAs_Raw,aes(sample=TPO4))+geom_qq()+facet_wrap(~Station,scales="free")+s
 
 ggplot(RPAs_Raw,aes(Station,TPO4,fill=Station))+geom_boxplot()+theme_bw()
 
-#measure skewness
+#measure skewness  https://www.rdocumentation.org/packages/e1071/versions/1.7-12/topics/skewness
 RPA_skew <-RPAs_Sorted %>%
 group_by(Station) %>%
-summarise(`Skewness type 1`=skewness(TPO4,na.rm=TRUE,type=1),`Skewness type 2`=skewness(TPO4,na.rm=T,type=2),`Skewness type 3`=skewness(TPO4,na.rm=T,type=3))
+summarise(`Skewness type 1`=e1071::skewness(TPO4,na.rm=TRUE,type=1),`Skewness type 2`=e1071::skewness(TPO4,na.rm=T,type=2),`Skewness type 3`=e1071::skewness(TPO4,na.rm=T,type=3))
 
+#Summarise Tukey outliers
+outlier_summary <- RPAs_Sorted %>%
+filter(`Flowpath Region`=="Outflow") %>%
+group_by(Station) %>%
+summarise(n(),IQR=IQR(TPO4,na.rm=TRUE),Q25=quantile(TPO4,.25,na.rm=TRUE),Q75=quantile(TPO4,.75,na.rm=TRUE),`outliers`=sum(!between(TPO4,Q25-1.5*IQR,Q75+1.5*IQR),na.rm=TRUE),`Percent outliers`=percent(`outliers`/n()))
+
+#Missing values
+MDL_summary <- RPAs_Sorted %>%
+filter(`Flowpath Region`=="Outflow") %>%
+group_by(Station) %>%
+summarise(n(),`missing`=sum(TPO4<2,na.rm=TRUE))
 # Hourly TP variation  ------------------------------------------------------------
 
 #Hourly TP Variation from the Daily Mean by Station
@@ -136,6 +147,15 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
 ggsave("Figures/Hourly TP Variation from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly TP Variation from the Daily Mean by Station Outflow stations only
+ggplot(filter(RPAs_Sorted,`Flowpath Region`=="Outflow" ),aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black",fill="grey")+theme_bw()+
+facet_grid(~Station)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+theme(legend.position="none",axis.text = element_text(size = 14), axis.title=element_text(size=18),strip.text.x = element_text(size = 18))+
+labs(title="",y=expression(TP~(mu~g~L^-1)),x="Time (Hour)")
+
+ggsave("Figures/Hourly TP Variation from the Daily Mean by Station- Outflow only.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
 
 #Hourly TP Variation from the Daily Mean by Flowpath and POsition
 ggplot(RPAs_Sorted,aes(Time,Diff_24_hour_mean,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
@@ -213,7 +233,6 @@ scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+s
 facet_wrap(~Station)+theme_bw()+
 labs(title="Variation from Daily Mean by Hour",y="TPO4 Deviation from daily mean (ug/L)",x="Hour")
 
-
 #Hourly % TP Variation from the Daily Mean by Station
 ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black")+theme_bw()+
 facet_wrap(~Station,nrow=1)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits=c(-50,50),breaks = seq(-50,50,5))+
@@ -221,6 +240,17 @@ scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 labs(title="Percent Variation from Daily Mean by Hour",y="TPO4 Percent Deviation from Daily (%)",x="Hour")
 
 ggsave("Figures/Hourly Percent Variation in TP from the Daily Mean by Station.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+#Hourly % TP Variation from the Daily Mean by Station -Outlfow only
+ggplot(filter(RPAs_Sorted,`Flowpath Region`=="Outflow" ),aes(Time,`Percent difference from daily mean`,color=Station))+geom_point(shape=1)+geom_smooth(method="loess",color="black",fill="grey",alpha=.6)+theme_bw()+
+facet_wrap(~Station,nrow=1)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(breaks = seq(-10,10,1))+coord_cartesian(ylim = c(-10,10),xlim=c(0,24))+
+scale_x_continuous(breaks = seq(0,24,4))+
+theme(legend.position="none",axis.text = element_text(size = 14), axis.title=element_text(size=18),strip.text.x = element_text(size = 18))+
+labs(title="",y="Deviation From Daily Mean TP (%)",x="Time (Hour)")
+
+ggsave("Figures/Hourly Percent Variation in TP from the Daily Mean by Station- Outflow only.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
+
+filter(RPAs_Sorted,`Flowpath Region`=="Outflow" ) %>% group_by(Station_ID) %>% summarise(n(),mean_TP=mean(TPO4,na.rm=TRUE))
 
 #Hourly % TP Variation from the Daily Median by Station
 ggplot(RPAs_Sorted,aes(Time,`Percent difference from daily median`,color=Station_ID,fill=Station_ID))+geom_point(shape=21)+
