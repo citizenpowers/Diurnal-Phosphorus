@@ -142,6 +142,12 @@ group_by(Flowway,Date) %>%
 summarise(n=n(),`sum HLR`=sum(abs(HLRout),na.rm=TRUE)) %>%
 filter(n==24)
 
+#histogram of daily total flow
+ggplot(Flow_by_day,aes(`sum HLR`/24,fill=Flowway))+geom_histogram(color="black")+facet_wrap(~Flowway,scales="free")+theme_bw()+labs(title="",x="Daily Mean HLR")
+
+#histogram of daily total flow removing no to little flow days
+ggplot(filter(Flow_by_day,`sum HLR`/24 > .5),aes(`sum HLR`/24,fill=Flowway))+geom_histogram(color="black")+facet_wrap(~Flowway,scales="free")+theme_bw()+labs(title="",x="Daily Mean HLR")
+
 #Percent flow by hour
 Daily_percent_flow_hour <- Combined_BK_Flow %>% mutate(Date=as.Date(Date)) %>% rename(HLRout="Outflow.HLR") %>% select(-Inflow, -Inflow.HLR) %>%
 left_join(Flow_by_day,by=c("Flowway","Date")) %>%
