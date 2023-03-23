@@ -52,8 +52,9 @@ pivot_longer(names_to="Sample Method",values_to="Value",7:9)
 
 Summary_Compliance_vs_RPA_Data <-Compliance_vs_RPA_Data %>%
 mutate(`All Samples Same Time`=ifelse(is.finite(G)+is.finite(ACF)+is.finite(RPA)==3,1,0))  %>%
+mutate(`RPA and Grab Same Time`=ifelse(is.finite(G)+is.finite(RPA)==2,1,0)) %>%
 group_by(Station) %>%
-summarise(n(),ACF=sum(is.finite(ACF)),G=sum(is.finite(G)),RPA=sum(is.finite(RPA)),`All Samples Same Time`=sum(`All Samples Same Time`))
+summarise(n(),ACF=sum(is.finite(ACF)),G=sum(is.finite(G)),RPA=sum(is.finite(RPA)),`All Samples Same Time`=sum(`All Samples Same Time`),`RPA and Grab Same Time`=sum(`RPA and Grab Same Time`))
 
 # Figures -----------------------------------------------------------------
 
@@ -67,7 +68,7 @@ labs(title="Grab vs Autosampler Samples",y="Grabs (ug/L)",x="Autosampler composi
 ggplot(filter(Compliance_vs_RPA_Data,Station %in% c("G334","G379","G381"))  ,aes(RPA,G))+geom_point()+geom_smooth(method="lm")+theme_bw()+stat_poly_line()+stat_poly_eq()+coord_cartesian(xlim=c(0,60),ylim=c(0,60)) #scatterplot observed vs fit
 #Grabs vs RPAs by station
 ggplot(filter(Compliance_vs_RPA_Data,Station %in% c("G334","G379","G381")) ,aes(RPA,G))+geom_point()+facet_wrap(~Station,scales="free")+geom_smooth(method="lm")+theme_bw()+stat_poly_line()+stat_poly_eq()+coord_cartesian(xlim=c(0,60),ylim=c(0,60))+ #scatterplot observed vs fit
-labs(title="RPA vs Grab Samples",y="Grabs (ug/L)",x="Autosampler composite flow (ug/L)")
+labs(title="RPA vs Grab Samples",y="Grabs (ug/L)",x="RPA (ug/L)")
 #Autos vs RPAs
 ggplot(filter(Compliance_vs_RPA_Data,Station %in% c("G334","G379","G381"))  ,aes(RPA,ACF))+geom_point()+geom_smooth(method="lm")+theme_bw()+stat_poly_line()+stat_poly_eq()+coord_cartesian(xlim=c(0,60),ylim=c(0,60)) #scatterplot observed vs fit
 #Autos vs RPAs by station

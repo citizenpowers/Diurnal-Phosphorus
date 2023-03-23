@@ -1,0 +1,66 @@
+---
+title: "Supplemental Material"
+author: "Matt Powers"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{message=FALSE, warning=FALSE}
+library(readr)      #import data 
+library(dplyr)      #tidy data
+library(lubridate)  #Date and time functions
+library(mgcv)       #GAM model package
+library(mgcViz)     #Visualization of GAM models
+library(tidyr)      #Tidy Data
+library(gridExtra)  #Needed to save partial effect plot
+library(scales)     #rescaling function
+
+RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv") 
+
+
+Stage_discharge_data <- RPAs_with_Flow_Stage_Weather_Sonde %>%
+mutate(Flag=if_else(Station == "G334" & Date >="2017-01-01",TRUE,FALSE)  ) %>%                #Flag data from SAV crash in STA-2 cell 3 2017 
+filter(Flag ==FALSE)  %>% select(-Flag) %>%                                                   #Remove unrepresentative data 
+filter(`Flowpath Region`=="Outflow") %>%                                                      #filter just the discharge data
+rename(Wind="WIND BELLEGLADE",HLRin="Inflow HLR",HLRout="Outflow HLR",Flowpath="Flowpath Region",TEMP="Temp S7",Rain="Rain S7",Stage_Out="Outflow Stage") %>% #Rename variables. Model will not accept variables with blank spaces as input 
+mutate(Station_ID=as.factor(Station_ID),Flowway=as.factor(Flowway),Year=as.factor(Year), Month=as.factor(month(Date, label=TRUE, abbr=TRUE)),Day=yday(Date)) %>%   #code categorical variables as factors
+mutate(`Mean_Depth` = case_when(Flowway=="STA-3/4 Central"~`Stage_Out`-9.4,
+                                Flowway=="STA-3/4 Western"~`Stage_Out`-9.7,
+                                Flowway=="STA-2 Central"~`Stage_Out`-9.5)) %>%                #Calculate mean depth using average ground stage
+filter(HLRout<18,HLRout>0) %>%                                                                #filter out high HLRs that only exist in the STA-2 Central flow-way and reverse flow conditions
+select(TPO4,Flowway,Station_ID,Year,Day,Time,TPO4,HLRout,Mean_Depth,Wind,Rain,Diff_24_hour_mean) %>%
+drop_na()
+  
+#Create training and test data sets
+set.seed(100)
+
+#create ID column
+Stage_discharge_data$id <- 1:nrow(Stage_discharge_data)
+
+#use 70% of dataset as training set and 30% as test set 
+Stage_discharge_data_train <- Stage_discharge_data %>% dplyr::sample_frac(0.70)
+Stage_discharge_data_test  <- dplyr::anti_join(Stage_discharge_data, Stage_discharge_data_train, by = 'id')
+
+
+
+
+
+#Hourly TP Variation from the Daily Mean by Station Outflow stations only
+ggplot(Stage_discharge_data,aes(Time,Diff_24_hour_mean,color=Flowway))+geom_point(shape=1)+geom_smooth(method="loess",color="black",fill="grey",se=FALSE)+theme_bw()+
+geom_ribbon(stat='smooth', method = "loess", se=TRUE, alpha=.3,color="grey") +
+facet_grid(~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
+theme(legend.position="none",axis.text = element_text(size = 14), axis.title=element_text(size=18),strip.text.x = element_text(size = 18))+
+labs(title="",y=expression(TP~(mu~g~L^-1)),x="Time (Hour)")
+```
+
