@@ -1,4 +1,4 @@
-#create Individual Conditional Expectation plots to look for heterogenoues treatment effects 
+#create Individual Conditional Expectation plots to look for heterogeneous treatment effects 
 
 
 library(readr)
@@ -32,7 +32,7 @@ library(pdp)
 
 #RPA tidy data 
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv") %>%
-mutate(Flag=if_else(Station == "G334" & Date >="2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed  
+  mutate(Flag=if_else(Station == "G334" & Date >="2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed  
   filter(Flag ==FALSE)  %>% select(-Flag) %>%
   rename(Wind="WIND BELLEGLADE",HLRin="Inflow HLR",HLRout="Outflow HLR",Flowpath="Flowpath Region",TEMP="Temp S7",Rain="Rain S7") %>% #models will not accept variables with blank spaces as input 
   mutate(Station_ID=as.factor(Station_ID),Flowpath=as.factor(Flowpath)) %>%
@@ -51,16 +51,14 @@ Mod_7 <- readRDS(file="./Data/Model/Mod_7.rda") #Import Model
 Mod_8 <- readRDS(file="./Data/Model/Mod_8.rda") #Import Model
 Mod_9 <- readRDS(file="./Data/Model/Mod_9.rda") #Import Model
 Mod_10 <- readRDS(file="./Data/Model/Mod_10.rda") #Import Model
-Mod_12 <- readRDS(file="./Data/Model/Mod_12.rda") #Import Model
 Mod_13 <- readRDS(file="./Data/Model/Mod_13.rda") #Import Model
-Mod_15 <- readRDS(file="./Data/Model/Mod_15.rda") #Import Model
 
 #Create Training and test data
 Stage_discharge_data <- filter(RPAs_with_Flow_Stage_Weather_Sonde,Flowpath=="Outflow") %>%  #filter just the discharge data
 mutate(`Mean_Depth` = case_when(Flowway=="STA-3/4 Central"~`Outflow Stage`-9.4,
                                   Flowway=="STA-3/4 Western"~`Outflow Stage`-9.7,
                                   Flowway=="STA-2 Central"~`Outflow Stage`-9.5)) %>%  #Calcaulate mean depth using average ground stage
-rename(Stage_Out="Outflow Stage") %>% filter(TPO4<2000) %>% mutate(Year=as.factor(Year)) %>%
+rename(Stage_Out="Outflow Stage") %>% filter(TPO4<200) %>% mutate(Year=as.factor(Year)) %>%
 select(TPO4,Station_ID,Year,Day,Time,TPO4,HLRout,Mean_Depth)
 
 #Create training and test data sets
@@ -87,18 +85,18 @@ test1 <- partial(Mod_15, pred.var = "Time",ice = TRUE,train=Stage_discharge_subs
 
 ggplot(test,aes(Time,yhat, color=Station_ID))+geom_point()
 
-autoplot(partial(Mod_4, pred.var = "Time",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2,plot.pdp=TRUE)+theme_bw()
+autoplot(partial(Mod_15, pred.var = "Time",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2,plot.pdp=TRUE)+theme_bw()
 
 
-plotPartial(partial(Mod_4.9, pred.var = "Day",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
+plotPartial(partial(Mod_15, pred.var = "Day",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
 
-plotPartial(partial(Mod_4, pred.var = "Station_ID",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
+plotPartial(partial(Mod_15, pred.var = "Station_ID",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
 
 plotPartial(partial(Mod_4, pred.var = "Year",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
 
-plotPartial(partial(Mod_4, pred.var = "HLRout",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
+plotPartial(partial(Mod_11, pred.var = "HLRout",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
 
-plotPartial(partial(Mod_4.9, pred.var = "Mean_Depth",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
+plotPartial(partial(Mod_12, pred.var = "Mean_Depth",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
 
 plotPartial(partial(Mod_15, pred.var = "Mean_Depth",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)
 
@@ -114,27 +112,12 @@ ice <- ice(object = Mod_1, X = Stage_discharge_data_train, predictor = "HLRout",
 
 # Correlation -------------------------------------------------------------
 
+ggplot(Stage_discharge_data ,aes(`HLRout`,Mean_Depth,color=Station_ID,fill=Station_ID))+geom_point()+facet_wrap(~Station_ID,scales="free")+geom_smooth(method="lm",color="black")+stat_poly_eq() 
 
-Flow_Depth_Correlations <-Stage_discharge_data  %>%
+TP_Flow_Correlations_group <-Stage_discharge_data  %>%
 group_by(Station_ID)  %>%
-summarise(n=sum(!is.na(TPO4)),`Outlflow Spearmans Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "spearman"))
-            
-Flow_Date_Correlations <-Stage_discharge_data  %>%
-group_by(Station_ID)  %>%
-summarise(n=sum(!is.na(TPO4)),`Outlflow Spearmans Correlation`=cor(`HLRout`,Day,use="pairwise.complete.obs", method = "spearman"))
+summarise(n=sum(!is.na(TPO4)),`Outflow pearson's Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "pearson"),`Outflow Spearmans Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "spearman"),`Outflow Kendall Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "kendall"))
 
-Flow_Time_Correlations <-Stage_discharge_data  %>%
-group_by(Station_ID)  %>%
-summarise(n=sum(!is.na(TPO4)),`Outlflow Spearmans Correlation`=cor(`HLRout`,Time,use="pairwise.complete.obs", method = "spearman"))
-
-Depth_Time_Correlations <-Stage_discharge_data  %>%
-group_by(Station_ID)  %>%
-summarise(n=sum(!is.na(TPO4)),`Outlflow Spearmans Correlation`=cor(`Mean_Depth`,Time,use="pairwise.complete.obs", method = "spearman"))
-
-Depth_Time_Correlations <-Stage_discharge_data  %>%
-group_by(Station_ID)  %>%
-summarise(n=sum(!is.na(TPO4)),`Outlflow Spearmans Correlation`=cor(`Mean_Depth`,Time,use="pairwise.complete.obs", method = "spearman"))
-
-
-            
+TP_Flow_Correlations <-Stage_discharge_data  %>%
+summarise(n=sum(!is.na(TPO4)),`Outflow pearson's Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "pearson"),`Outflow Spearmans Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "spearman"),`Outflow Kendall Correlation`=cor(`HLRout`,Mean_Depth,use="pairwise.complete.obs", method = "kendall"))
 
