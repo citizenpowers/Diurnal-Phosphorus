@@ -15,6 +15,12 @@ library(scales)     #rescaling function
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv") 
 
 
+STA2_SAV_crash <- RPAs_with_Flow_Stage_Weather_Sonde %>%
+filter(Station=="G334") %>%  
+mutate(Flag=if_else(Station == "G334" & Date >="2017-01-01",TRUE,FALSE)  ) %>%
+count(Flag)
+
+
 
 # Theme for plots ---------------------------------------------------------
 # Create Theme for plots
@@ -35,7 +41,10 @@ mutate(`Mean_Depth` = case_when(Flowway=="STA-3/4 Central"~`Stage_Out`-9.4,
                                 Flowway=="STA-3/4 Western"~`Stage_Out`-9.7,
                                 Flowway=="STA-2 Central"~`Stage_Out`-9.5)) %>%                #Calculate mean depth using average ground stage
 filter(HLRout<18,HLRout>0) %>%                                                                #filter out high HLRs that only exist in the STA-2 Central flow-way and reverse flow conditions
-select(TPO4,Flowway,Station_ID,Year,Day,Time,TPO4,HLRout,Mean_Depth,Wind,Rain,Diff_24_hour_mean) %>%
+select(TPO4,Flowway,Station_ID,Year,Day,Time,TPO4,HLRout,Mean_Depth,Wind,Rain,Diff_24_hour_mean,`Percent difference from daily mean`) %>%
+mutate(`Label` = case_when(Flowway=="STA-3/4 Central"~"STA-3/4 Central \n (G379D)",
+                                  Flowway=="STA-3/4 Western"~"STA-3/4 Western \n (G381B)",
+                                  Flowway=="STA-2 Central"~"STA-2 Flow-way 3 \n (G334)")) %>% 
 drop_na()
   
 #Create training and test data sets
@@ -51,9 +60,9 @@ Stage_discharge_data_test  <- dplyr::anti_join(Stage_discharge_data, Stage_disch
 # Figure 2 Diel P trend  --------------------------------------------------
 
 #Hourly TP Variation from the Daily Mean by Station Outflow stations only
-ggplot(Stage_discharge_data,aes(Time,Diff_24_hour_mean,color=Flowway))+geom_point(shape=1)+geom_smooth(method="loess",color="black",fill="grey",se=FALSE)+theme_bw()+
-geom_ribbon(stat='smooth', method = "loess", se=TRUE, alpha=.3,color="grey") +
-facet_grid(~Flowway)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
+ggplot(Stage_discharge_data,aes(Time,Diff_24_hour_mean,color=Label))+geom_point(shape=1)+geom_smooth(method="loess",color="black",fill="grey",se=FALSE)+theme_bw()+
+geom_ribbon(stat='smooth', method = "loess", se=TRUE, alpha=.3,color="grey",level=.99) +
+facet_grid(~Label)+scale_colour_brewer( type = "qual", palette = "Set2")+geom_hline(yintercept=0)+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,1))+
 scale_x_continuous(limits = c(0,24),breaks = seq(0,24,4))+
 theme(legend.position="none",axis.text = element_text(size = 14), axis.title=element_text(size=18),strip.text.x = element_text(size = 18))+
 labs(title="",y=expression(TP~(mu~g~L^-1)),x="Time (Hour)")
@@ -118,10 +127,16 @@ plot(Mod_1.3, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TR
 vis.gam(Mod_1.3, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
 summary(Mod_1.3)
 gam.check(Mod_1.3,rep=1000)
+concurvity(Mod_1.3)
 saveRDS(Mod_1.3, file="./Data/Model/Mod_1.3.rda")
 
+concurvity(Mod_1.2)
 
-
+Mod_1.3b <- gam(TPO4 ~s(Day,k=10,bs="cc")+Year+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
+plot(Mod_1.3b, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
+summary(Mod_1.3b)
+gam.check(Mod_1.3b,rep=1000)
+concurvity(Mod_1.3b)
 
 #create partial effect plot for model 1.3 
 
@@ -145,7 +160,7 @@ grid.arrange(grobs = lapply(PDP_mod_1.3, "[[", "ggObj"), layout_matrix = fig_lay
 
 dev.off()
 
-
+citation(stats)
 # Create Figure 5 ---------------------------------------------------------
 
 
@@ -168,43 +183,81 @@ dev.off()
 
 sessionInfo()
 
-# re-scaled predictors model -----------------------------------------------
-
-Stage_discharge_data_train_rescale <- Stage_discharge_data_train %>%
-mutate(Day=rescale(Day),Time=rescale(Time),HLRout=rescale(HLRout),Mean_Depth=rescale(Mean_Depth))
-
-#allow for different HLR and Time by flow-way  (Figure 4a-c)
-Mod_1.3_rescale <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train_rescale ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_rescale, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_rescale, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_rescale)
-gam.check(Mod_1.3_rescale)
-saveRDS(Mod_1.3, file="./Data/Model/Mod_1.3.rda")
 
 
-#allow for different HLR and Time by flow-way  scat distribution
-Mod_1.3_scat <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=scat(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_scat, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_scat)
-gam.check(Mod_1.3_scat,rep=500)
+# Supplemental Figures 1a-d Model Diagnostics-------------------------------------------------
+
+summary(Mod_1.3)
+gam.check(Mod_1.3,rep=1000)
+concurvity(Mod_1.3)
 
 
-Mod_1.3_select <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),select=TRUE,data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_select, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_select, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_select)
-gam.check(Mod_1.3_select,rep=1000)
+# Supplemental Figures 1a-d    Test for autocorrelation ------------------------------------------------
+#Base method
+png("Figures/Autocorrelation plot Model 1.3.png", units = "mm", res = 1000, height = 160, width = 140)
+acf(residuals(Mod_1.3))
+dev.off()
 
-Mod_1.3_m_1 <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m =1, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 1, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_m_1 , shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_m_1 , view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_m_1 )
-gam.check(Mod_1.3_m_1 ,rep=1000)
+png("Figures/Partial Autocorrelation plot Model 1.3.png", units = "mm", res = 1000, height = 160, width = 140)
+pacf(residuals(Mod_1.3))
+dev.off()
 
-Mod_1.3_year_flowway_RI <- gam(TPO4 ~s(Day,k=10,bs="cc")+Year+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_year_flowway_RI, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_year_flowway_RI, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_year_flowway_RI)
-gam.check(Mod_1.3_year_flowway_RI,rep=1000)
+qnorm(0.975)
+#GGplot method
+acf <- acf(residuals(Mod_1.3),plot = FALSE)
+acf <- with(acf, data.frame(lag, acf))
 
+acf_plot <- ggplot(data = acf, mapping = aes(x = lag, y = acf)) +geom_segment(mapping = aes(xend = lag, yend = 0))+
+geom_hline(aes(yintercept = 0)) +geom_hline(aes(yintercept =qnorm(0.975)/sqrt(38)), linetype = 3, color = 'darkblue') + geom_hline(aes(yintercept = -qnorm(0.975)/sqrt(38)), linetype = 3, color = 'darkblue')+
+theme(legend.position="none",axis.text = element_text(size = 14), axis.title=element_text(size=18))
+
+
+pacf <- pacf(residuals(Mod_1.3),plot = FALSE)
+pacf <- with(pacf, data.frame(lag,pacf))
+pacf_plot
+
+sqrt(nrow(acf))
+
+plot_grid(Time_PD_plot ,Depth_PD_plot, HLR_PD_plot,Day__PD_plot,Flowway_PD_plot ,Year_PD_plot, labels = c('A', 'B','C','D','E','F'), label_size = 18,nrow=3)
+
+
+ggsave("Figures/Autocorrelation plot Model 1.3.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+
+
+
+
+
+
+# Supplemental Figure 2  --------------------------------------------------
+
+#Figure flow category and difference from the daily mean OutFLOW stations only
+
+ggplot(Stage_discharge_data1,aes(Time,`Percent difference from daily mean`,color=Label))+geom_point(shape=1)+geom_smooth(method="loess",color="black",level=.99)+
+facet_grid(~Label)+scale_colour_brewer( type = "qual", palette = "Set2")+scale_y_continuous(limits = c(-10,10),breaks = seq(-10,10,2))+theme_bw()+
+theme(legend.position="none",axis.text = element_text(size = 12), axis.title=element_text(size=18),strip.text.x = element_text(size = 18),panel.margin.x=unit(1.25, "lines"))+
+scale_x_continuous(limits = c(0,24),breaks=seq(0,24,4),labels=c("12AM","4","8","12PM","4","8","12AM"))+  
+labs(title="",y="Deviation from Daily Mean TP (%)",x="Hour")
+
+ggsave("Figures/TPO4 Deviation from Daily Mean by outflow Station.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+
+
+
+# Supplemental Figure 3.  Percent of daily discharge by hour in each STA flow-way----------------------------------
+
+#Percent flow by hour
+Daily_percent_flow_hour <- Combined_BK_Flow %>% mutate(Date=as.Date(Date)) %>% rename(HLRout="Outflow.HLR") %>% select(-Inflow, -Inflow.HLR) %>%
+left_join(Flow_by_day,by=c("Flowway","Date")) %>%
+mutate(`Percent flow by Hour`=HLRout/`sum HLR`*100) %>%
+mutate(`Label` = case_when(Flowway=="STA-3/4 Central"~"STA-3/4 Central \n (G379D)",
+                             Flowway=="STA-3/4 Western"~"STA-3/4 Western \n (G381B)",
+                             Flowway=="STA-2 Central"~"STA-2 Flow-way 3 \n (G334)")) 
+  
+
+ggplot(Daily_percent_flow_hour ,aes(as.factor(Hour),`Percent flow by Hour`,fill=Label))+geom_boxplot(color="black")+facet_wrap(~Label)+coord_cartesian(ylim = c(0, 10))+
+labs(title="",y="Percent of Daily Discharge (%)",x="Hour")+guides(fill=guide_legend(title="Flow-way"))+theme_bw()+scale_x_discrete(breaks=c("0","4","8","12","16","20","23"), labels=c("12AM","4","8","12PM","4","8","11PM")) +
+theme(legend.position="none",axis.text = element_text(size = 9), axis.title=element_text(size=18),strip.text.x = element_text(size = 18),panel.margin.x=unit(1.25, "lines"))
+
+
+ggsave("Figures/Percent of Daily Discharge by Hour.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)

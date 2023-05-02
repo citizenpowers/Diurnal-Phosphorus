@@ -140,7 +140,7 @@ mutate(`Station_ID` = case_when(`Flowway` == "STA-2 Central"~"G334",            
 rename(HLRout="Outflow.HLR",HLRin="Inflow.HLR") %>%
 group_by(Flowway,Date) %>%
 summarise(n=n(),`sum HLR`=sum(abs(HLRout),na.rm=TRUE)) %>%
-filter(n==24)
+filter(n==24)  
 
 #histogram of daily total flow
 ggplot(Flow_by_day,aes(`sum HLR`/24,fill=Flowway))+geom_histogram(color="black")+facet_wrap(~Flowway,scales="free")+theme_bw()+labs(title="",x="Daily Mean HLR")
@@ -151,9 +151,12 @@ ggplot(filter(Flow_by_day,`sum HLR`/24 > .5),aes(`sum HLR`/24,fill=Flowway))+geo
 #Percent flow by hour
 Daily_percent_flow_hour <- Combined_BK_Flow %>% mutate(Date=as.Date(Date)) %>% rename(HLRout="Outflow.HLR") %>% select(-Inflow, -Inflow.HLR) %>%
 left_join(Flow_by_day,by=c("Flowway","Date")) %>%
-mutate(`Percent flow by Hour`=HLRout/`sum HLR`*100)
+mutate(`Percent flow by Hour`=HLRout/`sum HLR`*100) %>%
+  mutate(`Label` = case_when(Flowway=="STA-3/4 Central"~"STA-3/4 Central \n (G379D)",
+                             Flowway=="STA-3/4 Western"~"STA-3/4 Western \n (G381B)",
+                             Flowway=="STA-2 Central"~"STA-2 Flow-way 3 \n (G334)"))
     
-ggplot(Daily_percent_flow_hour ,aes(as.factor(Hour),`Percent flow by Hour`,fill=Flowway))+geom_boxplot(color="black")+facet_wrap(~Flowway)+coord_cartesian(ylim = c(0, 10))+
+ggplot(Daily_percent_flow_hour ,aes(as.factor(Hour),`Percent flow by Hour`,fill=Label))+geom_boxplot(color="black")+facet_wrap(~Label)+coord_cartesian(ylim = c(0, 10))+
 labs(title="",y="Percent of Daily Discharge (%)",x="Hour")+guides(fill=guide_legend(title="Flow-way"))+theme_bw()+ theme(legend.position="bottom")
 
 ggsave("Figures/Percent of Daily Discharge by Hour.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
