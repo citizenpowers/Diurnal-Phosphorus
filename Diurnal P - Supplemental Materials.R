@@ -27,16 +27,11 @@ filter(Flag ==FALSE)  %>% select(-Flag) %>%                                     
 filter(`Flowpath Region`=="Outflow") %>%                                                      #filter just the discharge data
 rename(Wind="WIND BELLEGLADE",HLRin="Inflow HLR",HLRout="Outflow HLR",Flowpath="Flowpath Region",TEMP="Temp S7",Rain="Rain S7",Stage_Out="Outflow Stage") %>% #Rename variables. Model will not accept variables with blank spaces as input 
 mutate(Station_ID=as.factor(Station_ID),Flowway=as.factor(Flowway),Year=as.factor(Year), Month=as.factor(month(Date, label=TRUE, abbr=TRUE)),Day=yday(Date)) %>%   #code categorical variables as factors
-mutate(`Mean_Depth` = case_when(Flowway=="STA-3/4 Central"~`Stage_Out`-9.4,
-                                Flowway=="STA-3/4 Western"~`Stage_Out`-9.7,
-                                Flowway=="STA-2 Central"~`Stage_Out`-9.5)) %>%                #Calculate mean depth using average ground stage
-mutate(`Flowway` = if_else(Flowway=="STA-2 Central","STA-2 Flow-way 3",Flowway)) %>%                #fix flow-way name
+mutate(`Flowway` = if_else(Flowway=="STA-2 Central","STA-2 Flow-way 3",Flowway)) %>%          #fix flow-way name
 mutate(Flowway=as.factor(Flowway)) %>%  
 filter(HLRout<18,HLRout>0) %>%                                                                #filter out high HLRs that only exist in the STA-2 Central flow-way and reverse flow conditions
 select(TPO4,Flowway,Station_ID,Year,Day,Time,TPO4,HLRout,Mean_Depth,Wind,Rain,Diff_24_hour_mean,`Percent difference from daily mean`) %>%
-mutate(`Label` = case_when(Flowway=="STA-3/4 Central"~"STA-3/4 Central \n (G379D)",
-                                  Flowway=="STA-3/4 Western"~"STA-3/4 Western \n (G381B)",
-                                  Flowway=="STA-2 Flow-way 3"~"STA-2 Flow-way 3 \n (G334)")) %>% 
+mutate(`Label` = case_when(Flowway=="STA-3/4 Central"~"STA-3/4 Central \n (G379D)",Flowway=="STA-3/4 Western"~"STA-3/4 Western \n (G381B)", Flowway=="STA-2 Flow-way 3"~"STA-2 Flow-way 3 \n (G334)")) %>% #Create better labels
 drop_na()
   
 #Create training and test data sets
@@ -115,11 +110,6 @@ dev.off()
 
 #allow for different HLR and Time by flow-way  (Figure 4a-c)
 Mod_1.3 <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3)
-gam.check(Mod_1.3,rep=1000)
-concurvity(Mod_1.3)
 saveRDS(Mod_1.3, file="./Data/Model/Mod_1.3.rda")
 
 #create partial effect plot for model 1.3 
@@ -164,12 +154,11 @@ dev.off()
 
 # Supplemental Figures 1a-d Model Diagnostics-------------------------------------------------
 
-summary(Mod_1.3)
+
 gam.check(Mod_1.3,rep=1000)
-concurvity(Mod_1.3)
 
 
-# Supplemental Figures 1a-d    Test for autocorrelation ------------------------------------------------
+# Supplemental Figures 1e-f    Test for autocorrelation ------------------------------------------------
 #Base method
 png("Figures/Autocorrelation plot Model 1.3.png", units = "mm", res = 1000, height = 160, width = 140)
 acf(residuals(Mod_1.3))
@@ -178,32 +167,6 @@ dev.off()
 png("Figures/Partial Autocorrelation plot Model 1.3.png", units = "mm", res = 1000, height = 160, width = 140)
 pacf(residuals(Mod_1.3))
 dev.off()
-
-
-#GGplot method
-acf <- acf(residuals(Mod_1.3),plot = FALSE)
-acf <- with(acf, data.frame(lag, acf))
-
-acf_plot <- ggplot(data = acf, mapping = aes(x = lag, y = acf)) +geom_segment(mapping = aes(xend = lag, yend = 0))+
-geom_hline(aes(yintercept = 0)) +geom_hline(aes(yintercept =qnorm(0.975)/sqrt(38)), linetype = 3, color = 'darkblue') + geom_hline(aes(yintercept = -qnorm(0.975)/sqrt(38)), linetype = 3, color = 'darkblue')+
-theme(legend.position="none",axis.text = element_text(size = 14), axis.title=element_text(size=18))
-
-
-pacf <- pacf(residuals(Mod_1.3),plot = FALSE)
-pacf <- with(pacf, data.frame(lag,pacf))
-pacf_plot
-
-sqrt(nrow(acf))
-
-plot_grid(Time_PD_plot ,Depth_PD_plot, HLR_PD_plot,Day__PD_plot,Flowway_PD_plot ,Year_PD_plot, labels = c('A', 'B','C','D','E','F'), label_size = 18,nrow=3)
-
-
-ggsave("Figures/Autocorrelation plot Model 1.3.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
-
-
-
-
-
 
 
 # Supplemental Figure 2  --------------------------------------------------
@@ -217,8 +180,6 @@ scale_x_continuous(limits = c(0,24),breaks=seq(0,24,4),labels=c("12AM","4","8","
 labs(title="",y="Deviation from Daily Mean TP (%)",x="Hour")
 
 ggsave("Figures/TPO4 Deviation from Daily Mean by outflow Station.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
-
-
 
 
 # Supplemental Figure 3.  Percent of daily discharge by hour in each STA flow-way----------------------------------

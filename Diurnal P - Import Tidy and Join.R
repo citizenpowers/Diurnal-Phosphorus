@@ -432,12 +432,14 @@ write.csv(RPAs_with_Flow, "Data/RPA and Flow.csv",row.names=FALSE)
 
 #import stage data form csv
 Combined_Stage <- read_csv("Data/Stage All Flowways.csv")
+RPAs_with_Flow <- read_csv("Data/RPA and Flow.csv")
 
 RPAs_with_Flow_Stage <- RPAs_with_Flow %>%
 left_join(Combined_Stage ,by=c("Flowway","Date","Hour")) %>%
 group_by(Flowway,Date) %>%
 mutate(`Outflow_Stage_24_hour_mean`=mean(`Outflow Stage`),`Inflow_Stage_24_hour_mean`=mean(`Inflow Stage`)) %>%       #calculate daily mean stage for inflow and outflow
-mutate(`Outflow Stage Diff 24 hour mean`=`Outflow Stage`-`Outflow_Stage_24_hour_mean`,`Inflow Stage Diff 24 hour mean`=`Inflow Stage`-`Inflow_Stage_24_hour_mean`)  #calculate hourly deviation from daily mean for inflow and outflow
+mutate(`Outflow Stage Diff 24 hour mean`=`Outflow Stage`-`Outflow_Stage_24_hour_mean`,`Inflow Stage Diff 24 hour mean`=`Inflow Stage`-`Inflow_Stage_24_hour_mean`) %>% #calculate hourly deviation from daily mean for inflow and outflow
+mutate(`Mean_Depth` = case_when(Flowway=="STA-3/4 Central"~`Outflow Stage`-9.4, Flowway=="STA-3/4 Western"~`Outflow Stage`-9.7,  Flowway=="STA-2 Central"~`Outflow Stage`-9.5)) 
 
 write.csv(RPAs_with_Flow_Stage, "Data/RPA and Flow and Stage.csv",row.names=FALSE)
 
