@@ -55,65 +55,8 @@ Stage_discharge_data_test  <- dplyr::anti_join(Stage_discharge_data, Stage_disch
 
 
 
-# Partial dependence plots using ICEbox Package ---------------------------
-custom_predict <- function(object, newdata) { predict(object, newdata)$predictions[,1]}
-
-
-
-ice <- ice(object = Mod_1.3, X = Stage_discharge_data_train, predictor = "HLRout", predictfcn = custom_predict)
-
-
-iceplot = ice(object = Mod_1.3, 
-              X = matrix_data, 
-              y = matrix_data$TPO4, 
-              predictor = "TPO4")
-
-plot(iceplot, 
-     plot_orig_pts_preds = F,
-     colorvec = '000000')
-
-
-# Create PDP plots using PDP package --------------------------------------
-
-par.HLR <- partial(Mod_1.3, pred.var = c("HLRout"), chull = TRUE)
-par.Time <- partial(Mod_1.3, pred.var = c("Time"), chull = TRUE)
-par.Year <- partial(Mod_1.3, pred.var = c("Year"), chull = TRUE)
-par.Day <- partial(Mod_1.3, pred.var = c("Day"), chull = TRUE)
-par.Depth <- partial(Mod_1.3, pred.var = c("Mean_Depth"), chull = TRUE)
-par.Flowway<- partial(Mod_1.3, pred.var = c("Flowway"), chull = TRUE)
-
-autoplot(par.Flowway, contour = TRUE)
-autoplot(par.Depth, contour = TRUE,,rug=TRUE,train=Stage_discharge_data_train )
-autoplot(par.Time, contour = TRUE,rug=TRUE,train=Stage_discharge_data_train )+theme_bw()
-autoplot(par.Day, contour = TRUE,,rug=TRUE,train=Stage_discharge_data_train )
-autoplot(par.HLR, contour = TRUE,rug=TRUE,train=Stage_discharge_data_train )
-autoplot(par.Year, contour = TRUE)
-
-#Ice plots
-pred.ice <- function(object, newdata) predict( Mod_1.3, head(Stage_discharge_data_test))
-
-par.Time <- partial(Mod_1.3, pred.var = c("Time"), chull = TRUE,pred.fun = pred.ice)
-par.HLR.ICE <- partial(Mod_1.3, pred.var = c("HLRout"), chull = TRUE,pred.fun = pred.ice)
-autoplot(par.HLR.ICE, contour = TRUE)
-
-
-
-# Create PDPs using Itsadug package ---------------------------------------
-
-plot(Mod_1.3, all.terms=TRUE, rug=FALSE)
-
-plot_smooth(Mod_1.3, view="Time",rm.ranef=FALSE)
-
-
 # Create PDPs using IML package -------------------------------------------
 mod <- Predictor$new(Mod_1.3, data = Stage_discharge_data_test)
-
-
-
-# Compute the accumulated local effects for the first feature
-HLRout <- FeatureEffect$new(mod, feature = "Time", grid.size = 30)
-HLRout$plot()+theme_bw()
-
 
 # Again, but this time with a partial dependence plot and ice curves
 
@@ -136,54 +79,10 @@ Year_PD_plot <- plot(Year_PDP_ICE)+theme_bw()+labs(x="Year")+scale_y_continuous(
 Flowway_PDP_ICE <- FeatureEffect$new(mod,feature = "Flowway", method = "pdp+ice", grid.size = 30)
 Flowway_PD_plot <-plot(Flowway_PDP_ICE)+theme_bw()+labs(x="Flowway")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
-
-
 plot_grid(Time_PD_plot ,Depth_PD_plot, HLR_PD_plot,Day__PD_plot,Flowway_PD_plot ,Year_PD_plot, labels = c('A', 'B','C','D','E','F'), label_size = 18,nrow=3)
 
 
 ggsave("Figures/Partial Dependence Plots SI4.jpeg", plot = last_plot(), width = 8, height = 11.5, units = "in", dpi = 300, limitsize = TRUE)
 
 
-citation("iml")
-
-
-# re-scaled predictors model -----------------------------------------------
-
-Stage_discharge_data_train_rescale <- Stage_discharge_data_train %>%
-  mutate(Day=rescale(Day),Time=rescale(Time),HLRout=rescale(HLRout),Mean_Depth=rescale(Mean_Depth))
-
-#allow for different HLR and Time by flow-way  (Figure 4a-c)
-Mod_1.3_rescale <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train_rescale ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_rescale, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_rescale, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_rescale)
-gam.check(Mod_1.3_rescale)
-saveRDS(Mod_1.3, file="./Data/Model/Mod_1.3.rda")
-
-
-#allow for different HLR and Time by flow-way  scat distribution
-Mod_1.3_scat <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=scat(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_scat, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_scat)
-gam.check(Mod_1.3_scat,rep=500)
-
-
-Mod_1.3_select <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),select=TRUE,data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_select, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_select, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_select)
-gam.check(Mod_1.3_select,rep=1000)
-
-Mod_1.3_m_1 <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m =1, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 1, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_m_1 , shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_m_1 , view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_m_1 )
-gam.check(Mod_1.3_m_1 ,rep=1000)
-
-Mod_1.3_year_flowway_RI <- gam(TPO4 ~s(Day,k=10,bs="cc")+Year+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,by = Flowway, m = 2, bs = "cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.3_year_flowway_RI, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-vis.gam(Mod_1.3_year_flowway_RI, view = c("HLRout", "Time"), plot.type = "persp",theta=45,too.far=.05, ticktype="detailed",type="response",cond=list(Station_ID="G379D"))  #3D HLR and station
-summary(Mod_1.3_year_flowway_RI)
-gam.check(Mod_1.3_year_flowway_RI,rep=1000)
 
