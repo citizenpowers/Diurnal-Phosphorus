@@ -12,6 +12,7 @@ library(maptools)
 library(ggpmisc)
 library(e1071)
 library(EnvStats)
+library(ggpubr)
 
 # Import data for RPA analysis -------------------------------------------------------------
 #RPA raw data
@@ -62,6 +63,7 @@ filter(Flag ==FALSE)
 #STA34 C2B 2533 + c2A 2888 acres
 
 # Date Range of RPA Data, Data Distribution, Outliers, and Missing Data ------------------------------------------------------
+
 ggplot(pivot_longer(RPAs_Sorted,3:4,names_to="Analyte",values_to="Value") ,aes(Date,Value,color=Analyte))+geom_point()+facet_wrap(~Station,ncol = 1)+theme_bw()
 
 ggsave("Figures/Date Range of RPA Data.jpeg", plot = last_plot(), width = 11.5, height = 8, units = "in", dpi = 300, limitsize = TRUE)
@@ -105,11 +107,16 @@ theme_bw()
 RPA_summary <-RPAs_Sorted %>%
 filter(`Flowpath Region`=="Outflow") %>%
 mutate(date=ymd_hms(ISOdate(year(Date),month(Date),1,1,0,0,tz = "America/New_York")))  %>%
-group_by(Station) %>%
+group_by(Station,Hour) %>%
 summarise(`Number of Observations`=sum(!is.na(TPO4)),`Total missing data`=sum(is.na(TPO4)),n=n()) %>% 
-mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) 
+mutate(`% missing data`=`Total missing data`/(`Number of Observations`+`Total missing data`)) %>%
+filter(`Number of Observations`>10)  
 
-ggplot(RPA_summary,aes(Hour,Value,fill=`Data Type`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
+# missing data by percent 
+ggplot(RPA_summary,aes(Hour,`% missing data` ,fill=`Station`))+geom_col(position="dodge",color="black")+facet_wrap(~Station,ncol = 3,scales="free")+theme_bw()+scale_y_continuous(labels = scales::percent)
+
+# histogram of hour of missing data
+ggplot(filter(RPAs_Sorted,`Flowpath Region`=="Outflow",is.na(TPO4)),aes(Hour,fill=`Station`))+geom_histogram()+facet_wrap(~Station,ncol = 2,scales="free")+theme_bw()
 
 # missing data by percent 
 ggplot(filter(RPA_summary,n>10),aes(Hour,`% missing data`))+geom_col()+facet_wrap(~Station,ncol = 2,scales="free")+scale_y_continuous(label=percent_format())+ theme_bw()
@@ -560,6 +567,10 @@ geom_hline(yintercept=0)+theme(legend.position="bottom")+coord_cartesian(ylim = 
 labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Outflow HLR",color=NULL)
 
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
+
+
+# Flow vs water depth with correlation -----------------------------------------
+ggplot(Stage_discharge_data,aes(HLRout,Mean_Depth))+geom_point()+facet_wrap(~Flowway)+stat_cor(method="pearson")+geom_smooth(method = "lm")+theme_bw()
 
 # TRP diel trend? ---------------------------------------------------------
 #Hourly TP Variation from the Daily Mean by Station

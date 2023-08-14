@@ -226,7 +226,6 @@ pacf(residuals(Mod_1.3))
 dev.off()
 
 
-
 # model validation --------------------------------------------------------
 
 #predict on test data

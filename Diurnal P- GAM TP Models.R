@@ -160,8 +160,8 @@ check(getViz(HLRin_Flowpath_Factor))
 # Effects of HLRout -------------------------------------------------------
 
 #reduce data to discharge stations only 
-Stage_discharge_data <- filter(RPAs_with_Flow_Stage_Weather_Sonde,Flowpath=="Outflow") %>% rename(Stage_Out="Outflow Stage") %>% filter(TPO4<200) %>% mutate(Year=as.factor(Year))
-Stage_discharge_data_34only <- filter(RPAs_with_Flow_Stage_Weather_Sonde,Flowpath=="Outflow") %>% rename(Stage_Out="Outflow Stage") %>% filter(TPO4<200) %>% filter(Station_ID !="G334")
+Stage_discharge_data <- filter(RPAs_with_Flow_Stage_Weather_Sonde,`Flowpath Region`=="Outflow") %>% rename(Stage_Out="Outflow Stage") %>% filter(TPO4<200) %>% mutate(Year=as.factor(Year))
+Stage_discharge_data_34only <- filter(RPAs_with_Flow_Stage_Weather_Sonde,`Flowpath Region`=="Outflow") %>% rename(Stage_Out="Outflow Stage") %>% filter(TPO4<200) %>% filter(Station_ID !="G334")
 
 
 #Single common smoother mod_G
