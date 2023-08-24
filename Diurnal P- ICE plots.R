@@ -85,7 +85,7 @@ test1 <- partial(Mod_15, pred.var = "Time",ice = TRUE,train=Stage_discharge_subs
 
 ggplot(test,aes(Time,yhat, color=Station_ID))+geom_point()
 
-autoplot(partial(Mod_15, pred.var = "Time",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2,plot.pdp=TRUE)+theme_bw()
+autoplot(partial(Mod_1, pred.var = "Time",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2,plot.pdp=TRUE)+theme_bw()
 
 
 plotPartial(partial(Mod_15, pred.var = "Day",ice = TRUE,train=Stage_discharge_subset),center=TRUE, alpha = 0.2)

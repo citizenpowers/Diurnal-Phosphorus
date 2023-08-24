@@ -56,28 +56,28 @@ Stage_discharge_data_test  <- dplyr::anti_join(Stage_discharge_data, Stage_disch
 
 
 # Create PDPs using IML package -------------------------------------------
-mod <- Predictor$new(Mod_1.3, data = Stage_discharge_data_test)
+mod <- Predictor$new(Mod_1.3, data = Stage_discharge_data_test,type="response")
 
 # Again, but this time with a partial dependence plot and ice curves
 
 Time_PDP_ICE <- FeatureEffect$new(mod,feature = "Time", method = "pdp+ice", grid.size = 30)
-Time_PD_plot <- plot(Time_PDP_ICE)+theme_bw()+labs(x="Time (Hour)")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+Time_PD_plot <- plot(Time_PDP_ICE)+theme_bw()+labs(x="Time (Hour)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
 
 HLROUT_PDP_ICE <- FeatureEffect$new(mod,feature = "HLRout", method = "pdp+ice", grid.size = 30)
-HLR_PD_plot <- plot(HLROUT_PDP_ICE)+theme_bw()+labs(x="Discharge (cm/day)")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+HLR_PD_plot <- plot(HLROUT_PDP_ICE)+theme_bw()+labs(x="Discharge (cm/day)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
 Depth_PDP_ICE <- FeatureEffect$new(mod,feature = "Mean_Depth", method = "pdp+ice", grid.size = 30)
-Depth_PD_plot <-plot(Depth_PDP_ICE)+theme_bw()+labs(x="Water Depth (ft)")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+Depth_PD_plot <-plot(Depth_PDP_ICE)+theme_bw()+labs(x="Water Depth (ft)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
 Day_PDP_ICE <- FeatureEffect$new(mod,feature = "Day", method = "pdp+ice", grid.size = 30)
-Day__PD_plot <-plot(Day_PDP_ICE)+theme_bw()+labs(x="Seasonality  (Day of Year)")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+Day__PD_plot <-plot(Day_PDP_ICE)+theme_bw()+labs(x="Seasonality  (Day of Year)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
 Year_PDP_ICE <- FeatureEffect$new(mod,feature = "Year", method = "pdp+ice", grid.size = 30)
-Year_PD_plot <- plot(Year_PDP_ICE)+theme_bw()+labs(x="Year")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+Year_PD_plot <- plot(Year_PDP_ICE)+theme_bw()+labs(x="Year")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
 Flowway_PDP_ICE <- FeatureEffect$new(mod,feature = "Flowway", method = "pdp+ice", grid.size = 30)
-Flowway_PD_plot <-plot(Flowway_PDP_ICE)+theme_bw()+labs(x="Flowway")+scale_y_continuous(name="Predicted TP",limits = c(2,4))+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+Flowway_PD_plot <-plot(Flowway_PDP_ICE)+theme_bw()+labs(x="Flowway")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
 
 plot_grid(Time_PD_plot ,Depth_PD_plot, HLR_PD_plot,Day__PD_plot,Flowway_PD_plot ,Year_PD_plot, labels = c('A', 'B','C','D','E','F'), label_size = 18,nrow=3)
 

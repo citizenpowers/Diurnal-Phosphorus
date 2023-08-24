@@ -17,6 +17,7 @@ citation("stats")
 # Import data -------------------------------------------------------------
 
 RPAs_with_Flow_Stage_Weather_Sonde <- read_csv("Data/RPA and Flow Stage Weather Sonde.csv") 
+Combined_BK_Flow <- read_csv("Data/Combined_BK_Flow.csv", col_types = cols(Date = col_date(format = "%Y-%m-%d"),  Inflow = col_number(), `Inflow HLR` = col_number(), Outflow = col_number(), `Outflow HLR` = col_number()))
 
 # Theme for plots ---------------------------------------------------------
 # Create Theme for plots
@@ -97,28 +98,6 @@ gam.check(Mod_1.2)
 saveRDS(Mod_1.2, file="./Data/Model/Mod_1.2.rda")
 AIC(Mod_1.2,Mod_1.2_fixed_year)
 
-
-just_for_fun <-gam(TPO4 ~s(Day,k=10,bs="cc")+s(Year,bs="re") + s(HLRout, bs = "tp")+s(Mean_Depth,k=5)+s(Time,bs="cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(just_for_fun, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-summary(just_for_fun)
-AIC(just_for_fun)
-
-Mod_1.2_no_year <- gam(TPO4 ~s(Day,k=10,bs="cc")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,bs="cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-summary(Mod_1.2_no_year)
-plot(Mod_1.2_no_year, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-
-Mod_1.2_RE_only <- gam(TPO4 ~s(Day,k=10,bs="cc")+s(Flowway,bs="re")+s(Year,bs="re")+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,bs="cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-summary(Mod_1.2_RE_only)
-plot(Mod_1.2_RE_only, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-
-
-Mod_1.2_fixed_year <- gam(TPO4 ~s(Day,k=10,bs="cc")+Year+Flowway + s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,bs="cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-plot(Mod_1.2_fixed_year, shade = TRUE, pages = 1, scale = 0, seWithMean = TRUE,all.terms=TRUE)
-summary(Mod_1.2_fixed_year)
-
-Mod_1.2_interaction <- gam(TPO4 ~ti(Day,Time,bs=c("cc","tp"),m=2)+s(Day,k=10,bs="cc")+s(Year,bs="re")+Flowway+ s(HLRout,by = Flowway, m = 2, bs = "tp")+s(Mean_Depth,k=5)+s(Time,bs="cc"),data =Stage_discharge_data_train ,method="REML",family=Gamma(link="log"),knots=list(Day=c(0, 366),Time=c(0,24)))
-summary(Mod_1.2_interaction)
-vis.gam(Mod_1.2_interaction, view = c("Day", "Time"),theta=-45)
 
 #Create Partial effect plot figure 3
 PEP_mod_1.2 <- list()
@@ -269,7 +248,7 @@ ggsave("Figures/TPO4 Deviation from Daily Mean by outflow Station.jpeg", plot = 
 # Supplemental Figure 3.  Percent of daily discharge by hour in each STA flow-way----------------------------------
 
 #Percent flow by hour
-Daily_percent_flow_hour <- Combined_BK_Flow %>% mutate(Date=as.Date(Date)) %>% rename(HLRout="Outflow.HLR") %>% select(-Inflow, -Inflow.HLR) %>%
+Daily_percent_flow_hour <- Combined_BK_Flow %>% mutate(Date=as.Date(Date)) %>% rename(HLRout="Outflow HLR") %>% select(-Inflow, -`Inflow HLR`) %>%
 left_join(Flow_by_day,by=c("Flowway","Date")) %>%
 mutate(`Percent flow by Hour`=HLRout/`sum HLR`*100) %>%
 mutate(`Label` = case_when(Flowway=="STA-3/4 Central"~"STA-3/4 Central \n (G379D)",
@@ -283,3 +262,32 @@ theme(legend.position="none",axis.text = element_text(size = 9), axis.title=elem
 
 
 ggsave("Figures/Percent of Daily Discharge by Hour.jpeg", plot = last_plot(), width = 8, height = 5, units = "in", dpi = 300, limitsize = TRUE)
+
+# Supplemental Figure 4. Create ICE and PDPs using IML package -------------------------------------------
+mod <- Predictor$new(Mod_1.3, data = Stage_discharge_data_test,type="response")
+
+
+Time_PDP_ICE <- FeatureEffect$new(mod,feature = "Time", method = "pdp+ice", grid.size = 30)
+Time_PD_plot <- plot(Time_PDP_ICE)+theme_bw()+labs(x="Time (Hour)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+
+
+HLROUT_PDP_ICE <- FeatureEffect$new(mod,feature = "HLRout", method = "pdp+ice", grid.size = 30)
+HLR_PD_plot <- plot(HLROUT_PDP_ICE)+theme_bw()+labs(x="Discharge (cm/day)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+
+Depth_PDP_ICE <- FeatureEffect$new(mod,feature = "Mean_Depth", method = "pdp+ice", grid.size = 30)
+Depth_PD_plot <-plot(Depth_PDP_ICE)+theme_bw()+labs(x="Water Depth (ft)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+
+Day_PDP_ICE <- FeatureEffect$new(mod,feature = "Day", method = "pdp+ice", grid.size = 30)
+Day__PD_plot <-plot(Day_PDP_ICE)+theme_bw()+labs(x="Seasonality  (Day of Year)")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+
+Year_PDP_ICE <- FeatureEffect$new(mod,feature = "Year", method = "pdp+ice", grid.size = 30)
+Year_PD_plot <- plot(Year_PDP_ICE)+theme_bw()+labs(x="Year")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))
+
+Flowway_PDP_ICE <- FeatureEffect$new(mod,feature = "Flowway", method = "pdp+ice", grid.size = 30)
+Flowway_PD_plot <-plot(Flowway_PDP_ICE)+theme_bw()+labs(x="Flowway")+scale_y_continuous(name="Predicted TP")+theme(axis.text = element_text(size = 14), axis.title=element_text(size=18))+scale_x_discrete(labels=c('STA-2 FW3', 'STA-34 C', 'STA-34 W'))
+
+plot_grid(Time_PD_plot ,Depth_PD_plot, HLR_PD_plot,Day__PD_plot,Flowway_PD_plot ,Year_PD_plot, labels = c('A', 'B','C','D','E','F'), label_size = 18,nrow=3)
+
+
+ggsave("Figures/Partial Dependence Plots SI4.jpeg", plot = last_plot(), width = 8, height = 11.5, units = "in", dpi = 300, limitsize = TRUE)
+
