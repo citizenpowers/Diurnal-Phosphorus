@@ -4,12 +4,11 @@ library(readr)
 library(readxl)
 library(scales)
 library(dplyr)
-library(ggpmisc)
+#library(ggpmisc)
 library(ggplot2)
 library(lubridate)
 library(tidyr)
-library(maptools)
-library(ggpmisc)
+#library(maptools)
 library(e1071)
 library(EnvStats)
 library(ggpubr)
@@ -40,6 +39,7 @@ filter(Flag ==FALSE)
 
 #RPA Flow and Stage Data
 RPAs_with_Flow_Stage  <- read_csv("Data/RPA and Flow and Stage.csv") %>%
+  mutate(`Month`=factor(`Month`,levels = c("Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
 mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)) %>%  #SAV crash in cell. Unrepresentative data removed
 filter(Flag ==FALSE)  
 
@@ -57,6 +57,9 @@ filter(Flag ==FALSE)
 RPAs_with_Flow_Stage_Weather_Sonde_Inflow_TP <- read_csv("Data/RPA and Flow Stage Weather Sonde Inflow TP.csv") %>%
 mutate(Flag=if_else(Station == "G334" & Date >"2017-01-01",TRUE,FALSE)  ) %>%  #SAV crash in cell. Unrepresentative data removed
 filter(Flag ==FALSE)
+
+
+
 
 #sta2 c3 =2296 acres
 #STA34 C3B 2114 + c3A 2444 acres
@@ -569,8 +572,38 @@ labs(title="TPO4 vs Outflow  ",y="TPO4 (ug/L)",x="Outflow HLR",color=NULL)
 ggsave("Figures/Hourly Deviation from Daily Median by Outflow Strength.jpeg", plot = last_plot(), width = 10, height = 11, units = "in", dpi = 300, limitsize = TRUE)
 
 
+#TP vs flow by station and month
+RPAs_with_Flow_Stage_no_outliers <- RPAs_with_Flow_Stage %>% 
+filter(case_when(`Flowpath Region`=="Outflow"~TPO4<90,
+                 `Flowpath Region`=="Midflow"~TPO4<90,
+                 `Flowpath Region`=="Inflow"~TPO4<400))
+                 
+
+ggplot(filter(RPAs_with_Flow_Stage_no_outliers,`Outflow Category`!="Reverse Flow") ,aes(`Outflow HLR`,TPO4,color=Flowway,fill=Flowway,linetype=Station_ID))+geom_point(shape=21,alpha=.5)+geom_smooth(color="black",fill="grey80",se=F,method="gam")+
+theme_bw()+facet_grid(`Flowpath Region`~Month,scales="free")+scale_colour_brewer(palette="Dark2")+scale_fill_brewer(palette="Dark2")+
+labs(title="RPA data TPO4 vs Outflow",y="TPO4 (ug/L)",x="Outflow (cm/day)",color=NULL)
+
+ggsave("Figures/TP vs flow by station and month.jpeg", plot = last_plot(), width = 16, height = 9, units = "in", dpi = 300, limitsize = TRUE)
+
+
+# TP vs Stage  ------------------------------------------------------------
+
+#TP vs flow by station and month
+RPAs_with_Flow_Stage_no_outliers <- RPAs_with_Flow_Stage %>% 
+  filter(case_when(`Flowpath Region`=="Outflow"~TPO4<90,
+                   `Flowpath Region`=="Midflow"~TPO4<90,
+                   `Flowpath Region`=="Inflow"~TPO4<400))
+
+
+ggplot(filter(RPAs_with_Flow_Stage_no_outliers,`Outflow Category`!="Reverse Flow") ,aes(Mean_Depth,TPO4,color=Flowway,fill=Flowway,linetype=Station_ID))+geom_point(shape=21,alpha=.5)+geom_smooth(color="black",fill="grey80",se=F,method="gam")+
+theme_bw()+facet_grid(`Flowpath Region`~Month,scales="free")+scale_colour_brewer(palette="Dark2")+scale_fill_brewer(palette="Dark2")+
+labs(title="RPA data TPO4 vs Depth",y="TPO4 (ug/L)",x="Depth (ft)",color=NULL)
+
+ggsave("Figures/TP vs Depth by station and month.jpeg", plot = last_plot(), width = 16, height = 9, units = "in", dpi = 300, limitsize = TRUE)
+
+
 # Flow vs water depth with correlation -----------------------------------------
-ggplot(Stage_discharge_data,aes(HLRout,Mean_Depth))+geom_point()+facet_wrap(~Flowway)+stat_cor(method="pearson")+geom_smooth(method = "lm")+theme_bw()
+ggplot(RPAs_with_Flow_Stage_no_outliers,aes(`Outflow HLR`,Mean_Depth))+geom_point()+facet_wrap(`Flowpath Region`~Flowway)+geom_smooth(method = "lm")+theme_bw()
 
 # TRP diel trend? ---------------------------------------------------------
 #Hourly TP Variation from the Daily Mean by Station
