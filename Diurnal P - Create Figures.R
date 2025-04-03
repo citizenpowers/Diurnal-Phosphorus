@@ -579,7 +579,7 @@ filter(case_when(`Flowpath Region`=="Outflow"~TPO4<90,
                  `Flowpath Region`=="Inflow"~TPO4<400))
                  
 
-ggplot(filter(RPAs_with_Flow_Stage_no_outliers,`Outflow Category`!="Reverse Flow") ,aes(`Outflow HLR`,TPO4,color=Flowway,fill=Flowway,linetype=Station_ID))+geom_point(shape=21,alpha=.5)+geom_smooth(color="black",fill="grey80",se=F,method="gam")+
+ggplot(filter(RPAs_with_Flow_Stage_no_outliers,`Outflow Category`!="Reverse Flow",`Flowpath Region`=="Outflow") ,aes(`Outflow HLR`,TPO4,color=Flowway,fill=Flowway))+geom_point(shape=21,alpha=.08)+geom_smooth(fill="grey80",se=F,method="gam")+
 theme_bw()+facet_grid(`Flowpath Region`~Month,scales="free")+scale_colour_brewer(palette="Dark2")+scale_fill_brewer(palette="Dark2")+
 labs(title="RPA data TPO4 vs Outflow",y="TPO4 (ug/L)",x="Outflow (cm/day)",color=NULL)
 
@@ -595,7 +595,7 @@ RPAs_with_Flow_Stage_no_outliers <- RPAs_with_Flow_Stage %>%
                    `Flowpath Region`=="Inflow"~TPO4<400))
 
 
-ggplot(filter(RPAs_with_Flow_Stage_no_outliers,`Outflow Category`!="Reverse Flow") ,aes(Mean_Depth,TPO4,color=Flowway,fill=Flowway,linetype=Station_ID))+geom_point(shape=21,alpha=.5)+geom_smooth(color="black",fill="grey80",se=F,method="gam")+
+ggplot(filter(RPAs_with_Flow_Stage_no_outliers,`Outflow Category`!="Reverse Flow",`Flowpath Region`=="Outflow") ,aes(Mean_Depth,TPO4,color=Flowway,fill=Flowway))+geom_point(shape=21,alpha=.08)+geom_smooth(fill="grey80",se=F,method="gam")+
 theme_bw()+facet_grid(`Flowpath Region`~Month,scales="free")+scale_colour_brewer(palette="Dark2")+scale_fill_brewer(palette="Dark2")+
 labs(title="RPA data TPO4 vs Depth",y="TPO4 (ug/L)",x="Depth (ft)",color=NULL)
 
